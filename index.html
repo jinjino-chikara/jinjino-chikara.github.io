@@ -232,6 +232,20 @@ details.more[open] summary{margin-bottom:4px}
 .chips.tight{gap:5px;max-width:380px}
 .vn-logo{display:flex;align-items:center;gap:8px;min-width:0}
 .vlogo{width:26px;height:26px;border-radius:6px;object-fit:contain;background:#fff;border:1px solid var(--line);flex:0 0 26px;padding:2px}
+.st.rs-1{border-color:var(--ok);color:var(--ok);background:var(--ok-soft)}
+.st.rs-2{border-color:#C24B3A;color:#A32D1E;background:#FDECEA}
+.st.rs-3,.st.rs-4,.st.rs-5{border-color:var(--line-2);color:var(--muted);background:var(--bg-2)}
+.st.rs-0{border-color:var(--gold);color:var(--gold-2);background:var(--gold-soft)}
+td input.cell.time{width:78px}
+.mv-head{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--bg-2);border-bottom:1px solid var(--line)}
+.mv-head b{font-family:var(--serif);color:var(--navy);font-size:15px}
+.mv-head .mini{margin-left:auto}
+.mv{background:#fff;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-bottom:12px}
+.mv table{min-width:720px}
+.past td{color:var(--muted)}
+.today td{background:var(--gold-soft)}
+.hint.notes{margin:12px 0 0;padding-left:1.2em;line-height:1.7}
+.hint.notes li{margin:2px 0}
 .loading{color:var(--faint);font-size:13px;padding:24px;text-align:center}
 .err{background:#FDECEA;color:#A32D1E;border:1px solid #F1B7AE;border-radius:8px;padding:10px 14px;font-size:13.5px;margin-top:12px}
 .login{max-width:420px;margin:40px auto}
@@ -280,7 +294,7 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
         <div class="field"><label>いま抱えている課題（複数可）</label><div class="chips" id="worries"></div></div>
       </details>
       <button class="primary" id="to-s2" onclick="goStep2()" disabled>サービス一覧を見る</button>
-      <p class="hint">ご入力いただいた情報は、ご紹介先のサービス事業者との商談設定にのみ使用します。商談後のアンケートにご協力いただいた方には、協力費として1商談あたり5,000円をお支払いします（受け取りの辞退も選べます）。</p>
+      <ul class="hint notes"><li>ご入力いただいた情報は、ご紹介先のサービス事業者との商談設定に使用します。</li><li>ご面談の詳細につきましては弊社よりLINEにてご連絡いたします。</li></ul>
     </div>
     <div id="s2" hidden>
       <div class="panel" style="padding:18px 22px">
@@ -350,6 +364,7 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
       <div class="kpis" id="kpis"></div>
       <div class="tabs" role="tablist">
         <button role="tab" aria-selected="true" data-tab="leads" onclick="setTab('leads')">つなぎ</button>
+        <button role="tab" aria-selected="false" data-tab="meet" onclick="setTab('meet')">商談</button>
         <button role="tab" aria-selected="false" data-tab="hr" onclick="setTab('hr')">人事一覧</button>
         <button role="tab" aria-selected="false" data-tab="sales" onclick="setTab('sales')">売上・支払</button>
         <button role="tab" aria-selected="false" data-tab="vendors" onclick="setTab('vendors')">ベンダー</button>
@@ -385,6 +400,22 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
       </div>
 
       </div><!-- /tab-leads -->
+
+      <div class="tabp" id="tab-meet" hidden>
+        <div class="sec"><h2>商談 <span class="mini" id="m-count"></span></h2><div class="tools">
+          <div class="seg" id="m-view"><button type="button" aria-pressed="true" onclick="meetView='list';renderMeet()">日時順</button><button type="button" aria-pressed="false" onclick="meetView='vendor';renderMeet()">ベンダーごと</button></div>
+          <button class="ghost" onclick="copyMeetTsv()">スプレッドシート用にコピー</button>
+        </div></div>
+        <div class="filterbar">
+          <div class="seg" id="m-stage"></div>
+          <select id="m-result" class="st" onchange="renderMeet()"><option value="">結果：すべて</option><option value="未確定">未確定（承認待ち）</option><option value="承認">承認</option><option value="非承認">非承認</option><option value="リスケ">リスケ</option><option value="ベンダーNG">ベンダーNG</option><option value="その他">その他</option></select>
+          <select id="m-vendor" class="st" onchange="renderMeet()"><option value="">ベンダー：すべて</option></select>
+          <select id="m-month" class="st" onchange="renderMeet()"><option value="">期間：すべて</option></select>
+          <input id="m-q" placeholder="人事名・会社名で絞り込み" oninput="renderMeet()">
+        </div>
+        <p class="mini" style="margin:-4px 0 10px">商談日・時刻・結果はその場で保存されます。結果が「承認」になった商談だけが売上として確定し、売上タブの請求一覧に乗ります。</p>
+        <div id="m-body"></div>
+      </div>
 
       <div class="tabp" id="tab-hr" hidden>
         <div class="sec"><h2>登録されている人事 <span class="mini" id="hr-count"></span></h2><div class="tools">
@@ -435,7 +466,7 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
         <div class="sec" style="margin-top:22px"><h2>商談ごとの明細</h2></div>
         <p class="mini" style="margin:-4px 0 10px">「つなぎ状況」を着座済みにすると自動でここに並び、売上はベンダーの単価、協力費は5,000円が入ります。数字と状態は直接編集でき、その場で保存されます。期限を過ぎて未入金・未払いの行は赤く表示します。</p>
         <div class="tablewrap"><table>
-          <thead><tr><th>商談日</th><th>人事</th><th>ベンダー</th><th>売上</th><th>協力費</th><th>紹介者報酬</th><th>粗利</th><th>ベンダー請求<div class="mini">入金期限</div></th><th>人事支払<div class="mini">支払期限</div></th><th>アンケート</th></tr></thead>
+          <thead><tr><th>商談日</th><th>人事</th><th>ベンダー</th><th>商談結果</th><th>売上</th><th>協力費</th><th>紹介者報酬</th><th>粗利</th><th>ベンダー請求<div class="mini">入金期限</div></th><th>人事支払<div class="mini">支払期限</div></th><th>アンケート</th></tr></thead>
           <tbody id="s-rows"></tbody></table></div>
         <div class="sec"><h2>月別サマリー</h2></div>
         <div class="tablewrap"><table style="min-width:520px">
@@ -491,6 +522,9 @@ const TARGETS=["〜50名","50〜300名","300〜1,000名","1,000名〜","人事�
 const RATE_LABEL={3:"ぜひ聞きたい",2:"少し聞いてみたい",1:"今は不要"};
 const RATE_CLASS={3:"hot",2:"warm",1:"cold"};
 const STATUS=["未対応","日程調整中","着座済み","見送り"];
+const RESULT_AFTER=['承認','非承認'],RESULT_BEFORE=['リスケ','ベンダーNG','その他'];const RESULTS=['未確定',...RESULT_AFTER,...RESULT_BEFORE];
+function isCash(r){return r.status==='着座済み'&&r.result==='承認';}
+function resultSelect(r,extraClass){const cur=r.result||'未確定';return `<select class="cell st rs-${RESULTS.indexOf(cur)} ${extraClass||''}" onchange="saveResp('${r.id}','${r.vendorId}','result',this.value)"><option ${cur==='未確定'?'selected':''}>未確定</option><optgroup label="商談後">${RESULT_AFTER.map(o=>`<option ${o===cur?'selected':''}>${o}</option>`).join('')}</optgroup><optgroup label="商談前">${RESULT_BEFORE.map(o=>`<option ${o===cur?'selected':''}>${o}</option>`).join('')}</optgroup></select>`;}
 const INVOICE=["未請求","請求済","入金済"],PAYOUT=["未払い","支払済","辞退"],SURVEY=["未提出","提出済"],PAYMENT=["","個人口座","法人口座","辞退"];
 let curTab='leads';let leadFilter='未対応';
 const REFERRER_FEE=3000,REFERRAL_BONUS=10000;
@@ -682,6 +716,7 @@ function leads(){
 function setTab(t){curTab=t;document.querySelectorAll('.tabs [role=tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===t)));document.querySelectorAll('.tabp').forEach(p=>p.hidden=p.id!=='tab-'+t);try{sessionStorage.setItem('jc_tab',t);}catch(e){}}
 function yen(n){return n===''||n==null||isNaN(n)?'—':'¥'+Number(n).toLocaleString();}
 function seated(){return A.responses.filter(x=>x.status==='着座済み');}
+function approved(){return A.responses.filter(isCash);}
 function renderLeads(L,vmap){
   const counts={};STATUS.forEach(st=>counts[st]=0);L.forEach(x=>{counts[x.status||'未対応']=(counts[x.status||'未対応']||0)+1;});
   document.getElementById('lead-seg').innerHTML=[...STATUS,'すべて'].map(st=>`<button type="button" aria-pressed="${leadFilter===st}" onclick="leadFilter='${st}';renderAdmin()">${st}<b>${st==='すべて'?L.length:(counts[st]||0)}</b></button>`).join('');
@@ -717,6 +752,46 @@ function hrRecords(){
     const tm=thisMonth();const monthLinked=rs.filter(r=>(r.status==='着座済み'||r.status==='日程調整中')&&((r.date||'').startsWith(tm)||(!r.date&&(r.updated||'').startsWith(tm))));
     return {...h,rs,seated,prog,monthLinked,vnames:rs.map(vn).join(' '),last,fee:seated.reduce((a,r)=>a+(Number(r.fee)||0),0)};});
 }
+let meetView='list',meetStage='all';
+function dtKey(r){return (r.date||'9999/99/99')+' '+(r.time||'99:99');}
+function meetRows(){return A.responses.filter(r=>r.status==='日程調整中'||r.status==='着座済み');}
+function renderMeet(){
+  const vmap={};A.vendors.forEach(x=>vmap[x.id]=x);
+  const all=meetRows();
+  const stages=[['all','すべて',all.length],['plan','予定（日程調整中）',all.filter(r=>r.status==='日程調整中').length],['done','実施済（着座）',all.filter(r=>r.status==='着座済み').length],['pending','承認待ち',all.filter(r=>r.status==='着座済み'&&(r.result||'未確定')==='未確定').length]];
+  document.getElementById('m-stage').innerHTML=stages.map(([v,l,n])=>`<button type="button" aria-pressed="${meetStage===v}" onclick="meetStage='${v}';renderMeet()">${l}<b>${n}</b></button>`).join('');
+  document.querySelectorAll('#m-view button').forEach((b,i)=>b.setAttribute('aria-pressed',String((i===0)===(meetView==='list'))));
+  const vs=document.getElementById('m-vendor');const keepV=vs.value;const vids=[...new Set(all.map(r=>r.vendorId))];
+  vs.innerHTML='<option value="">ベンダー：すべて</option>'+vids.map(id=>`<option value="${id}">${esc(vmap[id]?.company||all.find(r=>r.vendorId===id).vendorName)}</option>`).join('');if(keepV)vs.value=keepV;
+  const ms=document.getElementById('m-month');const keepM=ms.value;const months=[...new Set(all.map(r=>monthOf(r.date)))].sort().reverse();
+  ms.innerHTML='<option value="">期間：すべて</option>'+months.map(m=>`<option value="${m}">${m==='日付不明'?m:m.replace('-','年')+'月'}</option>`).join('');if(keepM)ms.value=keepM;
+  const fr=document.getElementById('m-result').value,fv=vs.value,fm=ms.value,q=(document.getElementById('m-q').value||'').trim();
+  let R=all.filter(r=>(meetStage==='all')||(meetStage==='plan'&&r.status==='日程調整中')||(meetStage==='done'&&r.status==='着座済み')||(meetStage==='pending'&&r.status==='着座済み'&&(r.result||'未確定')==='未確定'));
+  if(fr)R=R.filter(r=>(r.result||'未確定')===fr);if(fv)R=R.filter(r=>r.vendorId===fv);if(fm)R=R.filter(r=>monthOf(r.date)===fm);if(q)R=R.filter(r=>(r.company+r.name).includes(q));
+  R.sort((a,b)=>dtKey(b).localeCompare(dtKey(a)));
+  document.getElementById('m-count').textContent=`${R.length}件`;
+  const todayS=new Date().toISOString().slice(0,10).replace(/-/g,'/');
+  const row=r=>{const d=(r.date||'').slice(0,10);const cls=d===todayS?'today':(d&&d<todayS?'past':'');return `<tr class="${cls}">
+    <td><div style="display:flex;gap:4px;align-items:center"><input type="date" class="cell" value="${esc(d.replace(/\//g,'-'))}" onchange="saveResp('${r.id}','${r.vendorId}','date',this.value.replace(/-/g,'/'))"><input type="time" class="cell time" value="${esc(r.time||'')}" onchange="saveResp('${r.id}','${r.vendorId}','time',this.value)"></div></td>
+    <td><b>${mark(r.company,r.name)}${esc(r.name)}</b><div class="mini">${esc(r.company)}</div></td>
+    ${meetView==='list'?`<td><div class="vn-logo">${vmap[r.vendorId]?.logo?`<img class="vlogo" src="${esc(vmap[r.vendorId].logo)}" alt="" loading="lazy" onerror="this.remove()">`:''}<div>${esc(vmap[r.vendorId]?.company||r.vendorName)}<div class="mini">${esc(r.vendorName)}</div></div></div></td>`:''}
+    <td><select class="st s${Math.max(0,STATUS.indexOf(r.status||'未対応'))}" onchange="setStatus('${r.id}','${r.vendorId}',this.value,this)">${STATUS.map(st=>`<option ${st===(r.status||'未対応')?'selected':''}>${st}</option>`).join('')}</select></td>
+    <td>${resultSelect(r)}</td>
+    <td class="num">${isCash(r)?'<span class="pos">'+yen(r.sales)+'</span>':(r.status==='着座済み'&&(r.result||'未確定')==='未確定'?'<span class="mini">承認待ち '+yen(r.sales)+'</span>':'<span class="mini">—</span>')}</td>
+    <td><input class="cell wide" value="${esc(r.memo||'')}" placeholder="メモ" onblur="saveResp('${r.id}','${r.vendorId}','memo',this.value)"></td>
+  </tr>`;};
+  const head=(withVendor)=>`<thead><tr><th>商談日時</th><th>人事</th>${withVendor?'<th>ベンダー</th>':''}<th>つなぎ状況</th><th>商談結果</th><th>売上</th><th>メモ</th></tr></thead>`;
+  const body=document.getElementById('m-body');
+  if(!R.length){body.innerHTML='<div class="empty">該当する商談がありません。</div>';return;}
+  if(meetView==='list'){body.innerHTML=`<div class="tablewrap"><table style="min-width:980px">${head(true)}<tbody>${R.map(row).join('')}</tbody></table></div>`;return;}
+  const byV={};R.forEach(r=>{(byV[r.vendorId]=byV[r.vendorId]||[]).push(r);});
+  body.innerHTML=Object.keys(byV).sort((a,b)=>byV[b].length-byV[a].length).map(id=>{const rs=byV[id];const vd=vmap[id]||{};const next=rs.filter(r=>(r.date||'')>=todayS).sort((a,b)=>dtKey(a).localeCompare(dtKey(b)))[0];
+    return `<div class="mv"><div class="mv-head">${vd.logo?`<img class="vlogo" src="${esc(vd.logo)}" alt="" onerror="this.remove()">`:''}<b>${esc(vd.company||rs[0].vendorName)}</b><span class="mini">${esc(rs[0].vendorName)}</span><span class="mini">${rs.length}件 ・ 承認 ${rs.filter(isCash).length} ・ 承認待ち ${rs.filter(r=>r.status==='着座済み'&&(r.result||'未確定')==='未確定').length}${next?' ・ 次回 '+esc(next.date)+(next.time?' '+esc(next.time):''):''}</span></div>
+      <div class="tablewrap" style="border:0;border-radius:0;box-shadow:none"><table>${head(false)}<tbody>${rs.map(row).join('')}</tbody></table></div></div>`;}).join('');
+}
+function copyMeetTsv(){const vmap={};A.vendors.forEach(x=>vmap[x.id]=x);const rows=[['商談日','時刻','会社','氏名','ベンダー','サービス','つなぎ状況','商談結果','売上','協力費','メモ']];
+  meetRows().sort((a,b)=>dtKey(b).localeCompare(dtKey(a))).forEach(r=>rows.push([r.date,r.time||'',r.company,r.name,vmap[r.vendorId]?.company||r.vendorName,r.vendorName,r.status,r.result||'未確定',r.sales,r.fee,r.memo||'']));
+  navigator.clipboard?.writeText(rows.map(r=>r.join('\t')).join('\n')).then(()=>toast('コピーしました'),()=>toast('コピーできませんでした'));}
 function renderHr(){
   const q=(document.getElementById('hr-q').value||'').trim();const f=document.getElementById('hr-f').value;
   const fs=document.getElementById('hr-size').value,fm=document.getElementById('hr-mid').value,fn=document.getElementById('hr-new').value,fa=document.getElementById('hr-area').value;
@@ -801,15 +876,16 @@ function renderSales(){
   if(keep&&months.includes(keep))sel.value=keep;else if(!keep){const cur=new Date().toISOString().slice(0,7);if(months.includes(cur))sel.value=cur;}
   const m=sel.value;const R=rows.filter(r=>!m||monthOf(r.date)===m).sort((a,b)=>((b.date||'')>(a.date||'')?1:-1));
   const sum=(arr,f)=>arr.reduce((a,r)=>a+(Number(r[f])||0),0);
-  const sales=sum(R,'sales'),fee=sum(R,'fee'),ref=sum(R,'refFee');
-  document.getElementById('s-kpis').innerHTML=[['着座件数',R.length,'件'],['売上',yen(sales),'税抜'],['協力費',yen(fee),ref?'人事へ ＋ 紹介者 '+yen(ref):'人事へ'],['粗利',yen(sales-fee-ref),sales?Math.round((sales-fee-ref)/sales*100)+'%':'']]
+  const RA=R.filter(isCash),RP=R.filter(r=>(r.result||'未確定')==='未確定');const sales=sum(RA,'sales'),fee=sum(R,'fee'),ref=sum(R,'refFee');
+  document.getElementById('s-kpis').innerHTML=[['着座件数',R.length,'件（承認 '+RA.length+'）'],['確定売上',yen(sales),RP.length?'承認待ち '+RP.length+'件 '+yen(sum(RP,'sales')):'承認済みのみ'],['協力費',yen(fee),ref?'人事へ ＋ 紹介者 '+yen(ref):'人事へ'],['粗利',yen(sales-fee-ref),sales?Math.round((sales-fee-ref)/sales*100)+'%':'']]
     .map(([t,n,s])=>`<div class="kpi"><small>${t}</small><b>${n}</b><div class="sub">${s}</div></div>`).join('');
   const vmap={};A.vendors.forEach(x=>vmap[x.id]=x);
   const opt=(arr,cur)=>arr.map(o=>`<option ${o===cur?'selected':''}>${o}</option>`).join('');
-  document.getElementById('s-rows').innerHTML=R.length?R.map(r=>{const cy=cycleOf(monthOf(r.date));const vOver=cy&&isOver(cy.vendorDue)&&(r.invoice||'未請求')!=='入金済';const hOver=cy&&isOver(cy.hrDue)&&(r.payout||'未払い')==='未払い';return `<tr class="${vOver||hOver?'late':''}">
+  document.getElementById('s-rows').innerHTML=R.length?R.map(r=>{const cy=cycleOf(monthOf(r.date));const vOver=isCash(r)&&cy&&isOver(cy.vendorDue)&&(r.invoice||'未請求')!=='入金済';const hOver=cy&&isOver(cy.hrDue)&&(r.payout||'未払い')==='未払い';return `<tr class="${vOver||hOver?'late':''}">
     <td><input type="date" class="cell" value="${esc((r.date||'').slice(0,10).replace(/\//g,'-'))}" onchange="saveResp('${r.id}','${r.vendorId}','date',this.value.replace(/-/g,'/'))"></td>
     <td><b>${mark(r.company,r.name)}${esc(r.name)}</b><div class="mini">${esc(r.company)}</div></td>
     <td><div class="vn-logo">${vmap[r.vendorId]?.logo?`<img class="vlogo" src="${esc(vmap[r.vendorId].logo)}" alt="" loading="lazy" onerror="this.remove()">`:''}<div>${esc(vmap[r.vendorId]?.company||r.vendorName)}<div class="mini">${esc(r.vendorName)}</div></div></div></td>
+    <td>${resultSelect(r)}</td>
     <td><input class="cell num" inputmode="numeric" value="${r.sales===''?'':r.sales}" onblur="saveResp('${r.id}','${r.vendorId}','sales',this.value.replace(/[^\d]/g,''))"></td>
     <td><input class="cell num" inputmode="numeric" value="${r.fee===''?'':r.fee}" onblur="saveResp('${r.id}','${r.vendorId}','fee',this.value.replace(/[^\d]/g,''))"></td>
     <td><input class="cell num" inputmode="numeric" value="${r.refFee===''||r.refFee==null?'':r.refFee}" placeholder="—" onblur="saveResp('${r.id}','${r.vendorId}','refFee',this.value.replace(/[^\d]/g,''))"></td>
@@ -817,17 +893,17 @@ function renderSales(){
     <td><select class="cell st ${r.invoice==='入金済'?'s2':r.invoice==='請求済'?'s1':''}" onchange="saveResp('${r.id}','${r.vendorId}','invoice',this.value)">${opt(INVOICE,r.invoice||'未請求')}</select><div class="due-mini ${vOver?'over':''}">${cy?'期限 '+fmtD(cy.vendorDue)+(vOver?' 超過':''):''}</div></td>
     <td><select class="cell st ${r.payout==='支払済'?'s2':''}" onchange="saveResp('${r.id}','${r.vendorId}','payout',this.value)">${opt(PAYOUT,r.payout||'未払い')}</select><div class="due-mini ${hOver?'over':''}">${cy?'期限 '+fmtD(cy.hrDue)+(hOver?' 超過':''):''}</div></td>
     <td><select class="cell st ${r.survey==='提出済'?'s2':''}" onchange="saveResp('${r.id}','${r.vendorId}','survey',this.value)">${opt(SURVEY,r.survey||'未提出')}</select></td>
-  </tr>`;}).join(''):`<tr><td colspan="10" class="mini" style="padding:24px;text-align:center">着座済みの商談がまだありません。「つなぎ」タブで状況を着座済みにすると、ここに並びます。</td></tr>`;
+  </tr>`;}).join(''):`<tr><td colspan="11" class="mini" style="padding:24px;text-align:center">着座済みの商談がまだありません。「つなぎ」タブで状況を着座済みにすると、ここに並びます。</td></tr>`;
   const byM={};rows.forEach(r=>{const k=monthOf(r.date);(byM[k]=byM[k]||[]).push(r);});
   document.getElementById('s-months').innerHTML=Object.keys(byM).sort((a,b)=>a==='日付不明'?1:b==='日付不明'?-1:(a<b?1:-1)).map(k=>{const a=byM[k];const sl=sum(a,'sales'),fe=sum(a,'fee');
-    const cy=cycleOf(k);const ui=a.filter(r=>(r.invoice||'未請求')!=='入金済').length,up=a.filter(r=>(r.payout||'未払い')==='未払い').length;const rf=sum(a,'refFee');
-    return `<tr><td>${k==='日付不明'?k:k.replace('-','年')+'月'}</td><td class="num">${a.length}</td><td class="num">${yen(sl)}</td><td class="num">${yen(fe)}${rf?'<div class="mini">＋紹介者 '+yen(rf)+'</div>':''}</td><td class="num pos">${yen(sl-fe-rf)}</td><td class="${cy&&isOver(cy.vendorDue)&&ui?'over':''}">${cy?fmtDY(cy.vendorDue):'—'}</td><td class="num ${cy&&isOver(cy.vendorDue)&&ui?'over':''}">${ui}件</td><td class="${cy&&isOver(cy.hrDue)&&up?'over':''}">${cy?fmtDY(cy.hrDue):'—'}</td><td class="num ${cy&&isOver(cy.hrDue)&&up?'over':''}">${up}件</td></tr>`;}).join('')||'<tr><td colspan="9" class="mini" style="padding:16px;text-align:center">—</td></tr>';
+    const ap=a.filter(isCash);const sl2=sum(ap,'sales');const cy=cycleOf(k);const ui=ap.filter(r=>(r.invoice||'未請求')!=='入金済').length,up=a.filter(r=>(r.payout||'未払い')==='未払い').length;const rf=sum(a,'refFee');const pend=a.filter(r=>(r.result||'未確定')==='未確定').length;
+    return `<tr><td>${k==='日付不明'?k:k.replace('-','年')+'月'}</td><td class="num">${a.length}${pend?'<div class="mini">承認待ち '+pend+'</div>':''}</td><td class="num">${yen(sl2)}</td><td class="num">${yen(fe)}${rf?'<div class="mini">＋紹介者 '+yen(rf)+'</div>':''}</td><td class="num pos">${yen(sl2-fe-rf)}</td><td class="${cy&&isOver(cy.vendorDue)&&ui?'over':''}">${cy?fmtDY(cy.vendorDue):'—'}</td><td class="num ${cy&&isOver(cy.vendorDue)&&ui?'over':''}">${ui}件</td><td class="${cy&&isOver(cy.hrDue)&&up?'over':''}">${cy?fmtDY(cy.hrDue):'—'}</td><td class="num ${cy&&isOver(cy.hrDue)&&up?'over':''}">${up}件</td></tr>`;}).join('')||'<tr><td colspan="9" class="mini" style="padding:16px;text-align:center">—</td></tr>';
   renderCycle(m,R,vmap);renderNow(rows);
 }
 function renderNow(rowsAll){
   const t=new Date();const ym=(y,m)=>{const d=new Date(y,m,1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');};
   const mIn=ym(t.getFullYear(),t.getMonth()-1), mOut=ym(t.getFullYear(),t.getMonth()-2);
-  const inc=rowsAll.filter(r=>monthOf(r.date)===mIn), out=rowsAll.filter(r=>monthOf(r.date)===mOut);
+  const inc=rowsAll.filter(r=>monthOf(r.date)===mIn&&isCash(r)), out=rowsAll.filter(r=>monthOf(r.date)===mOut);
   const sum=(a,f)=>a.reduce((x,r)=>x+(Number(r[f])||0),0);
   const incOpen=inc.filter(r=>(r.invoice||'未請求')!=='入金済'), outOpen=out.filter(r=>(r.payout||'未払い')==='未払い');
   const cyIn=cycleOf(mIn),cyOut=cycleOf(mOut);
@@ -838,10 +914,10 @@ function renderNow(rowsAll){
 function renderCycle(m,R,vmap){
   const cy=cycleOf(m);const el=document.getElementById('s-cycle');
   if(!cy){el.innerHTML=m===''?'<div class="c" style="grid-column:1/-1"><span class="mini">月を選ぶと、その月の締め日・期限とベンダー別／人事別の一覧が出ます。</span></div>':'';}
-  else{const ui=R.filter(r=>(r.invoice||'未請求')!=='入金済').length,up=R.filter(r=>(r.payout||'未払い')==='未払い').length;
+  else{const ui=R.filter(isCash).filter(r=>(r.invoice||'未請求')!=='入金済').length,up=R.filter(r=>(r.payout||'未払い')==='未払い').length;
     el.innerHTML=`<div class="c"><div><b>ベンダー請求</b><div class="mini">${fmtD(cy.close)} 締め → 翌月末 入金</div></div><div><div class="due ${isOver(cy.vendorDue)&&ui?'over':''}">${fmtDY(cy.vendorDue)}</div><div class="mini">${ui?ui+'件が未入金':'すべて入金済'}</div></div></div>
       <div class="c"><div><b>人事 協力費支払</b><div class="mini">${fmtD(cy.close)} 締め → 翌々月10営業日</div></div><div><div class="due ${isOver(cy.hrDue)&&up?'over':''}">${fmtDY(cy.hrDue)}</div><div class="mini">${up?up+'名分が未払い':'すべて支払済'}</div></div></div>`;}
-  const byV={};R.forEach(r=>{const k=r.vendorId||r.vendorName;(byV[k]=byV[k]||{name:(vmap[r.vendorId]||{}).company||r.vendorName,rows:[]}).rows.push(r);});
+  const byV={};R.filter(isCash).forEach(r=>{const k=r.vendorId||r.vendorName;(byV[k]=byV[k]||{name:(vmap[r.vendorId]||{}).company||r.vendorName,rows:[]}).rows.push(r);});
   const sum=(a,f)=>a.reduce((x,r)=>x+(Number(r[f])||0),0);
   document.getElementById('s-byvendor').innerHTML=Object.values(byV).sort((a,b)=>sum(b.rows,'sales')-sum(a.rows,'sales')).map(g=>{const paid=g.rows.filter(r=>r.invoice==='入金済').length,billed=g.rows.filter(r=>r.invoice==='請求済').length;
     return `<tr><td><b>${esc(g.name)}</b></td><td class="num">${g.rows.length}</td><td class="num">${yen(sum(g.rows,'sales'))}</td><td class="mini">${paid===g.rows.length?'<span class="tag" style="background:var(--ok-soft);color:var(--ok)">入金済</span>':`入金済 ${paid} ／ 請求済 ${billed} ／ 未請求 ${g.rows.length-paid-billed}`}</td></tr>`;}).join('')||'<tr><td colspan="4" class="mini" style="padding:14px;text-align:center">—</td></tr>';
@@ -857,14 +933,16 @@ function renderCycle(m,R,vmap){
     return {html:`<tr><td><b>${mark(g.r.company,g.r.name)}${esc(g.r.name)}</b><div class="mini">${esc(g.r.company)}</div></td><td class="num">${g.rows.length}</td><td class="num">${yen(amt)}</td><td class="mini">${esc(h.payment||'未設定')}</td><td class="mini">${paid+dec===g.rows.length?'<span class="tag" style="background:var(--ok-soft);color:var(--ok)">完了</span>':`未払い ${g.rows.length-paid-dec}`}</td></tr>`,amt};}).sort((a,b)=>b.amt-a.amt).map(x=>x.html).join('')||'<tr><td colspan="5" class="mini" style="padding:14px;text-align:center">—</td></tr>';
 }
 async function saveResp(id,vendorId,field,value){const r=A.responses.find(x=>x.id===id&&x.vendorId===vendorId);if(!r)return;
-  const val=(field==='sales'||field==='fee'||field==='refFee')?(value===''?'':Number(value)):value;if(r[field]===val)return;r[field]=val;renderSales();
+  const val=(field==='sales'||field==='fee'||field==='refFee')?(value===''?'':Number(value)):value;if(r[field]===val)return;r[field]=val;
+  if(field==='result'&&value==='承認'&&(r.sales===''||r.sales==null)){const vd=A.vendors.find(x=>x.id===vendorId);const p=Number(String(vd?.price||'').replace(/[^\d]/g,''));if(p){r.sales=p;api('update_response',{token,id,vendorId,fields:{sales:p}}).catch(()=>{});}}
+  renderSales();renderMeet();
   try{await api('update_response',{token,id,vendorId,fields:{[field]:val}});store.set('jc_admin',{tok:token,d:A,t:Date.now()});toast('保存しました');}catch(e){toast('保存できませんでした：'+e.message);}}
 function copyHrTsv(){const rows=[['会社','規模','氏名','役職','関心領域','つなぎ済み企業','協力費累計','受取方法','連絡先','メモ']];
   const byKey={};A.responses.forEach(r=>{const k=r.company.trim()+'|'+r.name.trim();(byKey[k]=byKey[k]||[]).push(r);});
   (A.hr||[]).forEach(h=>{const rs=byKey[h.key]||[];rows.push([h.company,h.size,h.name,h.role,(h.areas||[]).join('、'),rs.filter(r=>r.status==='着座済み').map(r=>r.vendorName+(r.date?'('+r.date+')':'')).join('、')+(rs.some(r=>r.status==='日程調整中')?' ／調整中：'+rs.filter(r=>r.status==='日程調整中').map(r=>r.vendorName).join('、'):''),rs.filter(r=>r.status==='着座済み').reduce((a,r)=>a+(Number(r.fee)||0),0),h.payment,h.contact,h.memo]);});
   navigator.clipboard?.writeText(rows.map(r=>r.join('\t')).join('\n')).then(()=>toast('コピーしました'),()=>toast('コピーできませんでした'));}
-function copySalesTsv(){const rows=[['商談日','会社','氏名','ベンダー','売上','協力費','紹介者報酬','粗利','ベンダー請求','人事支払','アンケート']];
-  seated().forEach(r=>rows.push([r.date,r.company,r.name,r.vendorName,r.sales,r.fee,r.refFee||'',(Number(r.sales)||0)-(Number(r.fee)||0)-(Number(r.refFee)||0),r.invoice||'未請求',r.payout||'未払い',r.survey||'未提出']));
+function copySalesTsv(){const rows=[['商談日','会社','氏名','ベンダー','商談結果','売上','協力費','紹介者報酬','粗利','ベンダー請求','人事支払','アンケート']];
+  seated().forEach(r=>rows.push([r.date,r.company,r.name,r.vendorName,r.result||'未確定',r.sales,r.fee,r.refFee||'',(Number(r.sales)||0)-(Number(r.fee)||0)-(Number(r.refFee)||0),r.invoice||'未請求',r.payout||'未払い',r.survey||'未提出']));
   navigator.clipboard?.writeText(rows.map(r=>r.join('\t')).join('\n')).then(()=>toast('コピーしました'),()=>toast('コピーできませんでした'));}
 function renderAdmin(){
   const L=leads();const seated=L.filter(x=>x.status==='着座済み').length;
@@ -894,11 +972,11 @@ function renderAdmin(){
     <div class="mini">${esc(x.company)} ・ ${esc(x.cat)} ・ ${esc(x.src)}${x.price?' ・ 単価 '+esc(x.price):''}${x.role?' ・ '+esc(x.role):''}</div><div>${esc(x.desc)}</div><div class="mini">向け：${esc(x.for)}</div>${x.cond?`<div class="mini cond">運営メモ：${esc(x.cond)}</div>`:''}<div class="mini">${x.detail?'詳細説明あり（'+x.detail.length+'字）':'<span style="color:#A32D1E">詳細説明なし</span>'}</div></div>`).join('');
   document.getElementById('vcount').textContent=`${A.vendors.length}社（掲載中 ${A.vendors.filter(x=>x.published).length} ・ DYM ${A.vendors.filter(x=>x.src==='DYM').length}）`;
   const ac=document.getElementById('a-cat');if(!ac.options.length)AREAS.forEach(a=>{const o=document.createElement('option');o.textContent=a;ac.appendChild(o);});
-  renderPropose();renderHr();renderSales();
+  renderPropose();renderHr();renderSales();renderMeet();
   try{const t=sessionStorage.getItem('jc_tab');if(t&&t!==curTab)setTab(t);}catch(e){}
 }
 async function setStatus(id,vendorId,status,sel){
-  const r=A.responses.find(x=>x.id===id&&x.vendorId===vendorId);if(r){r.status=status;if(status==='着座済み'){const vd=A.vendors.find(x=>x.id===vendorId);if(!r.date)r.date=new Date().toISOString().slice(0,10).replace(/-/g,'/');if(r.sales===''||r.sales==null){const p=Number(String(vd?.price||'').replace(/[^\d]/g,''));if(p)r.sales=p;}if(r.fee===''||r.fee==null)r.fee=5000;{const hh=(A.hr||[]).find(x=>x.key===r.company.trim()+'|'+r.name.trim());if(hh&&hh.referrer&&(r.refFee===''||r.refFee==null))r.refFee=REFERRER_FEE;}r.invoice=r.invoice||'未請求';r.payout=r.payout||'未払い';r.survey=r.survey||'未提出';}}sel.className='st s'+STATUS.indexOf(status);renderSales();renderHr();setTimeout(renderAdmin,350);
+  const r=A.responses.find(x=>x.id===id&&x.vendorId===vendorId);if(r){r.status=status;if(status==='着座済み'){const vd=A.vendors.find(x=>x.id===vendorId);if(!r.date)r.date=new Date().toISOString().slice(0,10).replace(/-/g,'/');if(r.sales===''||r.sales==null){const p=Number(String(vd?.price||'').replace(/[^\d]/g,''));if(p)r.sales=p;}if(r.fee===''||r.fee==null)r.fee=5000;{const hh=(A.hr||[]).find(x=>x.key===r.company.trim()+'|'+r.name.trim());if(hh&&hh.referrer&&(r.refFee===''||r.refFee==null))r.refFee=REFERRER_FEE;}r.invoice=r.invoice||'未請求';r.payout=r.payout||'未払い';r.survey=r.survey||'未提出';r.result=r.result||'未確定';}}sel.className='st s'+STATUS.indexOf(status);renderSales();renderHr();setTimeout(renderAdmin,350);
   try{await api('status',{token,id,vendorId,status});store.set('jc_admin',{tok:token,d:A,t:Date.now()});toast('保存しました');}
   catch(e){toast('保存できませんでした：'+e.message);loadAdmin();}
 }
