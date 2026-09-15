@@ -407,6 +407,7 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
       <div class="tabp" id="tab-meet" hidden>
         <div class="sec"><h2>商談 <span class="mini" id="m-count"></span></h2><div class="tools">
           <div class="seg" id="m-view"><button type="button" aria-pressed="true" onclick="meetView='list';renderMeet()">日時順</button><button type="button" aria-pressed="false" onclick="meetView='vendor';renderMeet()">ベンダーごと</button></div>
+          <button class="primary" style="width:auto;margin:0;padding:9px 14px;font-size:13px" onclick="openMeetModal()">＋ 商談を追加</button>
           <button class="ghost" onclick="copyMeetTsv()">スプレッドシート用にコピー</button>
         </div></div>
         <div class="filterbar">
@@ -441,13 +442,7 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
         <div class="tablewrap"><table style="min-width:1040px">
           <thead><tr><th style="width:120px">活動 / タグ</th><th>会社 / 規模</th><th>氏名 / 役職</th><th>採用数（新卒 / 中途）</th><th>関心領域</th><th>着座済み（つなぎ済み）</th><th>日程調整中</th><th>協力費累計</th></tr></thead>
           <tbody id="hr-rows"></tbody></table></div>
-        <div class="addform" style="margin-top:12px">
-          <b style="font-size:14px">人事を手動で追加</b>
-          <div class="row"><input id="h-company" placeholder="会社名"><input id="h-name" placeholder="氏名"></div>
-          <div class="row"><input id="h-role" placeholder="役職"><input id="h-size" placeholder="従業員規模"></div>
-          <div class="row"><input id="h-contact" placeholder="連絡先（LINE名・メールなど）"><input id="h-memo" placeholder="メモ"></div>
-          <button class="primary" style="margin-top:4px" onclick="addHr()">追加する</button>
-        </div>
+        <div style="margin-top:12px"><button class="primary" style="width:auto;margin:0" onclick="openNewHr()">＋ 人事を追加（全項目を手入力）</button></div>
       </div>
 
       <div class="tabp" id="tab-sales" hidden>
@@ -757,7 +752,7 @@ function hrRecords(){
     // 活動＝人事が実際に動いた日：提案シートの回答日（旧シート取り込み分は除く）と商談日
     const acts=rs.flatMap(r=>[(r.memo||'').startsWith('旧シート')?'':(r.ts||''),r.date||'']).map(x=>String(x).slice(0,10)).filter(x=>/^\d{4}\/\d{2}\/\d{2}$/.test(x));
     const lastAct=acts.sort().pop()||'';const days=lastAct?Math.max(0,Math.floor((TODAY-new Date(lastAct.replace(/\//g,'-')))/86400000)):null;
-    const act=days==null?'長期未接触':days<=60?'活動中':days<=180?'休眠':'長期未接触';
+    const autoAct=days==null?'長期未接触':days<=60?'活動中':days<=180?'休眠':'長期未接触';const act=h.actOverride||autoAct;
     return {...h,rs,seated,prog,monthLinked,vnames:rs.map(vn).join(' '),last,lastAct,days,act,fee:seated.reduce((a,r)=>a+(Number(r.fee)||0),0)};});
 }
 let meetView='list',meetStage='all';
@@ -818,7 +813,7 @@ function renderHr(){
   document.getElementById('hr-rows').innerHTML=rows.length?rows.map(h=>{
     const seatedHtml=h.seated.length?`<div class="chips tight">${h.seated.slice().sort((a,b)=>((b.date||'')>(a.date||'')?1:-1)).map(r=>vchip(r,vmap,'seated')).join('')}</div>`:'<span class="mini">—</span>';
     const progHtml=h.prog.length?`<div class="chips tight">${h.prog.map(r=>vchip(r,vmap,'prog')).join('')}</div>`:'<span class="mini">—</span>';
-    const actBadge=`<span class="act act-${h.act==='活動中'?'on':h.act==='休眠'?'idle':'off'}" title="${h.lastAct?'最終活動 '+esc(h.lastAct)+'（'+h.days+'日前）':'活動記録なし'}">${h.act}</span>`;
+    const actBadge=`<span class="act act-${h.act==='活動中'?'on':h.act==='休眠'?'idle':'off'}" title="${h.actOverride?'手動設定':(h.lastAct?'最終活動 '+esc(h.lastAct)+'（'+h.days+'日前）':'活動記録なし')}">${h.act}${h.actOverride?'<small>手動</small>':''}</span>`;
     const tags=actBadge+((h.tags||[]).map(t=>`<span class="tag tg-${HR_TAGS.indexOf(t)}">${esc(t)}</span>`).join(' ')||'');
     return `<tr class="hrrow" onclick="openHr('${esc(h.key)}')">
       <td>${tags}</td>
@@ -833,31 +828,135 @@ function renderHr(){
 }
 // ---- 人事詳細 ----
 let curHr=null;
+const SIZES=["〜50名","50〜300名","300〜1,000名","1,000名〜"],ROLES=["人事担当者","人事課長・マネージャー","人事部長・責任者","役員・取締役以上"],HIRE=["","0名","1〜10名","11〜30名","31〜50名","51〜100名","101名以上"],HARD=["","エンジニア・IT専門職","営業・ビジネス職","製造・現場（ブルーカラー）","サービス・販売・店舗","管理部門・バックオフィス","医療・介護","施工管理・建設","その他"],TIMING=["","すぐにでも導入/相談したい","3ヶ月以内に検討したい","良いものがあれば検討したい","情報収集中/未定"],ACTS=["","活動中","休眠","長期未接触"];
+function sel(id,opts,cur,attrs){const o2=(cur&&!opts.includes(cur))?[...opts,cur]:opts;return `<select id="${id}" ${attrs||''}>${o2.map(o=>`<option value="${esc(o)}" ${o===(cur||'')?'selected':''}>${o===''?'未選択':esc(o)}</option>`).join('')}</select>`;}
+function inp(id,val,ph,attrs){return `<input id="${id}" value="${esc(val||'')}" placeholder="${esc(ph||'')}" ${attrs||''}>`;}
+function hrForm(h,isNew){
+  const dis=h.unsaved?'disabled':'';
+  const areas=new Set(h.areas||[]);const tags=new Set(h.tags||[]);
+  return `
+    <div class="grid2">
+      <div class="field"><label>会社名</label>${inp('e-company',h.company,'株式会社〇〇')}</div>
+      <div class="field"><label>氏名</label>${inp('e-name',h.name,'山田 太郎')}</div>
+    </div>
+    ${isNew?'':`<div class="mini" style="margin-top:4px">会社名・氏名を変えた場合は「名前を保存」を押してください。つないだ企業の記録も一緒に書き換わります。 <button class="ghost" style="padding:4px 10px" onclick="renameHr('${esc(h.key)}')">名前を保存</button></div>`}
+    <div class="grid2">
+      <div class="field"><label>役職</label>${sel('e-role',['',...ROLES],h.role)}</div>
+      <div class="field"><label>従業員規模</label>${sel('e-size',['',...SIZES],h.size)}</div>
+      <div class="field"><label>具体的な従業員数</label>${inp('e-headcount',h.headcount,'例：186')}</div>
+      <div class="field"><label>HP</label>${inp('e-hp',h.hp,'https://')}</div>
+      <div class="field"><label>年間採用 新卒</label>${sel('e-newgrad',HIRE,h.newgrad)}</div>
+      <div class="field"><label>年間採用 中途</label>${sel('e-midcareer',HIRE,h.midcareer)}</div>
+      <div class="field"><label>苦戦している職種</label>${sel('e-hardjob',HARD,h.hardjob)}</div>
+      <div class="field"><label>検討時期</label>${sel('e-timing',TIMING,h.timing)}</div>
+    </div>
+    <div class="field"><label>関心領域</label><div class="chips" id="e-areas">${AREAS.map(a=>`<button type="button" class="chip" aria-pressed="${areas.has(a)}" onclick="this.setAttribute('aria-pressed',this.getAttribute('aria-pressed')!=='true')">${a}</button>`).join('')}</div></div>
+    <div class="field"><label>採用手法</label>${inp('e-methods',h.methods,'例：求人媒体、人材紹介')}</div>
+    <div class="field"><label>課題・悩み</label><textarea id="e-worry" rows="2">${esc(h.worry||'')}</textarea></div>
+    <div class="grid2">
+      <div class="field"><label>紹介者</label>${inp('e-referrer',h.referrer,'例：位野花岳彦（アドインテ）','list="referrers"')}<datalist id="referrers">${[...new Set((A.hr||[]).map(x=>x.referrer).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join('')}</datalist></div>
+      <div class="field"><label>受取方法</label>${sel('e-payment',PAYMENT,h.payment)}</div>
+      <div class="field"><label>連絡先</label>${inp('e-contact',h.contact,'LINE名・メール・電話')}</div>
+      <div class="field"><label>活動状況（手動で固定する場合）</label>${sel('e-act',ACTS,h.actOverride)}</div>
+    </div>
+    <div class="field"><label>タグ</label><div class="chips" id="e-tags">${HR_TAGS.map((t,i)=>`<button type="button" class="chip tg-${i}" aria-pressed="${tags.has(t)}" onclick="this.setAttribute('aria-pressed',this.getAttribute('aria-pressed')!=='true')">${t}</button>`).join('')}</div></div>
+    <div class="field"><label>メモ</label><textarea id="e-memo" rows="2">${esc(h.memo||'')}</textarea></div>
+    <button class="primary" style="margin-top:14px" onclick="${isNew?'saveNewHr()':`saveHrAll('${esc(h.key)}')`}">${isNew?'この内容で人事を追加':'人事の情報を保存'}</button>`;
+}
+function readHrForm(){
+  const g=id=>(document.getElementById(id)||{}).value||'';
+  return {company:g('e-company').trim(),name:g('e-name').trim(),role:g('e-role'),size:g('e-size'),headcount:g('e-headcount'),hp:g('e-hp'),newgrad:g('e-newgrad'),midcareer:g('e-midcareer'),hardjob:g('e-hardjob'),timing:g('e-timing'),
+    areas:[...document.querySelectorAll('#e-areas [aria-pressed="true"]')].map(b=>b.textContent).join('、'),methods:g('e-methods'),worry:g('e-worry'),referrer:g('e-referrer'),payment:g('e-payment'),contact:g('e-contact'),actOverride:g('e-act'),
+    tags:[...document.querySelectorAll('#e-tags [aria-pressed="true"]')].map(b=>b.textContent).join('、'),memo:g('e-memo')};
+}
+async function saveHrAll(key){
+  const f=readHrForm();const h=(A.hr||[]).find(x=>x.key===key);
+  const fields={role:f.role,size:f.size,headcount:f.headcount,hp:f.hp,newgrad:f.newgrad,midcareer:f.midcareer,hardjob:f.hardjob,timing:f.timing,areas:f.areas,methods:f.methods,worry:f.worry,referrer:f.referrer,payment:f.payment,contact:f.contact,actOverride:f.actOverride,tags:f.tags,memo:f.memo};
+  if(h){Object.assign(h,fields,{areas:f.areas.split('、').filter(Boolean),tags:f.tags.split('、').filter(Boolean)});renderHr();}
+  try{await api('update_hr',{token,key,fields});store.set('jc_admin',{tok:token,d:A,t:Date.now()});toast('保存しました');}catch(e){toast('保存できませんでした：'+e.message);}
+}
+async function saveNewHr(){
+  const f=readHrForm();if(!f.company||!f.name){toast('会社名と氏名は必須です');return;}
+  try{await api('add_hr',{token,hr:f});toast('人事を追加しました');closeHr();loadAdmin();}catch(e){toast(e.message);}
+}
+async function renameHr(key){
+  const f=readHrForm();if(!f.company||!f.name){toast('会社名と氏名は必須です');return;}
+  if(f.company+'|'+f.name===key){toast('変更はありません');return;}
+  if(!confirm(`「${key.replace('|',' ')}」を「${f.company} ${f.name}」に変更します。つないだ企業の記録も書き換わります。よろしいですか？`))return;
+  try{const j=await api('rename_hr',{token,key,company:f.company,name:f.name});toast('名前を変更しました');closeHr();loadAdmin();}catch(e){toast(e.message);}
+}
+function meetingForm(prefill){
+  const vs=A.vendors.slice().sort((a,b)=>(a.published===b.published?0:a.published?-1:1));
+  const hrOpts=(A.hr||[]).slice().sort((a,b)=>(a.company||'').localeCompare(b.company||'','ja'));
+  return `<div class="addform" id="mf" style="margin-top:10px">
+    <b style="font-size:14px">商談を追加</b>
+    ${prefill.key?'':`<div class="field" style="margin-top:0"><label>人事</label><input id="mf-hr" list="mf-hrlist" placeholder="会社名または氏名で検索"><datalist id="mf-hrlist">${hrOpts.map(h=>`<option value="${esc(h.company)} / ${esc(h.name)}">`).join('')}</datalist></div>`}
+    <div class="row"><div class="field" style="margin-top:0"><label>ベンダー</label><select id="mf-vendor">${vs.map(v=>`<option value="${v.id}">${esc(v.company||v.name)}（${esc(v.name)}）${v.published?'':' ※非掲載'}</option>`).join('')}</select></div>
+      <div class="field" style="margin-top:0"><label>つなぎ状況</label><select id="mf-status"><option>日程調整中</option><option>着座済み</option><option>未対応</option><option>見送り</option></select></div></div>
+    <div class="row"><div class="field" style="margin-top:0"><label>商談日</label><input type="date" id="mf-date"></div><div class="field" style="margin-top:0"><label>時刻</label><input type="time" id="mf-time"></div></div>
+    <div class="row"><div class="field" style="margin-top:0"><label>商談結果</label><select id="mf-result"><option value="">未確定</option><optgroup label="商談後">${RESULT_AFTER.map(o=>`<option>${o}</option>`).join('')}</optgroup><optgroup label="商談前">${RESULT_BEFORE.map(o=>`<option>${o}</option>`).join('')}</optgroup></select></div>
+      <div class="field" style="margin-top:0"><label>売上（空欄ならベンダー単価）</label><input id="mf-sales" inputmode="numeric" placeholder="例：30000"></div></div>
+    <div class="row"><div class="field" style="margin-top:0"><label>協力費（空欄なら5,000）</label><input id="mf-fee" inputmode="numeric" placeholder="5000"></div><div class="field" style="margin-top:0"><label>メモ</label><input id="mf-memo" placeholder="任意"></div></div>
+    <button class="primary" style="margin-top:4px" onclick="submitMeeting('${esc(prefill.key||'')}')">商談を登録</button>
+  </div>`;
+}
+async function submitMeeting(key){
+  let company,name;
+  if(key){[company,name]=key.split('|');}
+  else{const v=(document.getElementById('mf-hr')||{}).value||'';const m=v.split(' / ');if(m.length<2){toast('人事を一覧から選んでください');return;}company=m[0].trim();name=m.slice(1).join(' / ').trim();}
+  const g=id=>(document.getElementById(id)||{}).value||'';
+  const row={company,name,vendorId:g('mf-vendor'),status:g('mf-status'),date:g('mf-date').replace(/-/g,'/'),time:g('mf-time'),result:g('mf-result'),sales:g('mf-sales').replace(/[^\d]/g,''),fee:g('mf-fee').replace(/[^\d]/g,''),memo:g('mf-memo')||'手動登録'};
+  if(!row.vendorId){toast('ベンダーを選んでください');return;}
+  try{await api('add_response',{token,row});toast('商談を登録しました');closeHr();closeMeetModal();loadAdmin();}catch(e){toast('登録できませんでした：'+e.message);}
+}
+async function deleteMeeting(id,vendorId){if(!confirm('この商談の記録を削除します。よろしいですか？'))return;
+  try{await api('delete_response',{token,id,vendorId});A.responses=A.responses.filter(r=>!(r.id===id&&r.vendorId===vendorId));toast('削除しました');closeHr();renderAdmin();}catch(e){toast(e.message);}}
 function openHr(key){
   const h=hrRecords().find(x=>x.key===key);if(!h)return;curHr=key;
   const vmap={};A.vendors.forEach(x=>vmap[x.id]=x);
-  const dis=h.unsaved?'disabled':'';
-  const row=(l,v)=>`<div class="kv"><span>${l}</span><b>${esc(v||'—')}</b></div>`;
   document.getElementById('hr-m-body').innerHTML=`
-    <div class="vhead" style="margin-bottom:8px"><div><div class="vname">${h.referrer?'🌸 ':''}${esc(h.name)}<span class="mini">　${esc(h.role||'')}</span></div><div class="vco">${esc(h.company)}${h.hp?` ・ <a href="${esc(h.hp)}" target="_blank" rel="noopener">HP</a>`:''}</div></div>
-      <div class="chips" id="hr-m-tags">${HR_TAGS.map((t,i)=>`<button type="button" class="chip tg-${i}" aria-pressed="${(h.tags||[]).includes(t)}" ${dis} onclick="toggleTag('${esc(key)}','${t}',this)">${t}</button>`).join('')}</div></div>
-    <div class="kvs">
-      ${row('従業員規模',h.size+(h.headcount?'（'+h.headcount+'）':''))}${row('年間採用 新卒',h.newgrad)}${row('年間採用 中途',h.midcareer)}${row('苦戦している職種',h.hardjob)}
-      ${row('関心領域',(h.areas||[]).join('、'))}${row('採用手法',h.methods)}${row('検討時期',h.timing)}${row('登録日',h.date)}${row('活動状況',h.act+(h.lastAct?'（最終 '+h.lastAct+'）':''))}
+    <div class="vhead" style="margin-bottom:6px"><div><div class="vname">${h.referrer?'🌸 ':''}${esc(h.name)}<span class="mini">　${esc(h.role||'')}</span></div><div class="vco">${esc(h.company)} ・ <span class="act act-${h.act==='活動中'?'on':h.act==='休眠'?'idle':'off'}">${h.act}</span>${h.lastAct?`<span class="mini"> 最終活動 ${esc(h.lastAct)}</span>`:''}</div></div>
+      <div class="mini">協力費累計 ${h.fee?yen(h.fee):'—'}</div></div>
+    <div class="tabs" style="margin-top:8px"><button role="tab" aria-selected="true" onclick="hrSub(this,'hr-p-meet')">つないだ企業（${h.rs.length}）</button><button role="tab" aria-selected="false" onclick="hrSub(this,'hr-p-edit')">情報を編集</button></div>
+    <div id="hr-p-meet">
+      ${h.rs.length?`<div class="tablewrap" style="margin-top:10px"><table style="min-width:640px"><thead><tr><th>企業</th><th>興味度</th><th>状況</th><th>商談日時</th><th>結果</th><th></th></tr></thead><tbody>${h.rs.slice().sort((a,b)=>dtKey(b).localeCompare(dtKey(a))).map(r=>`<tr>
+        <td><div class="vn-logo">${(vmap[r.vendorId]||{}).logo?`<img class="vlogo" src="${esc(vmap[r.vendorId].logo)}" alt="" loading="lazy" onerror="this.remove()">`:''}<div><b>${esc((vmap[r.vendorId]||{}).company||r.vendorName)}</b><div class="mini">${esc(r.vendorName)}</div></div></div></td>
+        <td><span class="tag ${RATE_CLASS[r.rate]||'cold'}">${RATE_LABEL[r.rate]||'—'}</span></td>
+        <td><select class="st s${Math.max(0,STATUS.indexOf(r.status||'未対応'))}" onchange="setStatus('${r.id}','${r.vendorId}',this.value,this)">${STATUS.map(st=>`<option ${st===(r.status||'未対応')?'selected':''}>${st}</option>`).join('')}</select></td>
+        <td><div style="display:flex;gap:4px"><input type="date" class="cell" value="${esc((r.date||'').slice(0,10).replace(/\//g,'-'))}" onchange="saveResp('${r.id}','${r.vendorId}','date',this.value.replace(/-/g,'/'))"><input type="time" class="cell time" value="${esc(r.time||'')}" onchange="saveResp('${r.id}','${r.vendorId}','time',this.value)"></div></td>
+        <td>${(r.status==='着座済み'||r.status==='日程調整中')?resultSelect(r):'<span class="mini">—</span>'}</td>
+        <td><button class="del" title="削除" onclick="deleteMeeting('${r.id}','${r.vendorId}')">削除</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="mini" style="margin-top:10px">まだ企業をつないでいません。</div>'}
+      ${meetingForm({key})}
+      <div style="margin-top:10px"><button class="ghost" onclick="closeHr();setTab('leads');leadFilter='すべて';document.getElementById('lead-q').value='${esc(h.name)}';renderAdmin()">つなぎタブで開く</button></div>
     </div>
-    ${h.worry?`<div class="kv wide"><span>課題・悩み</span><b>${esc(h.worry)}</b></div>`:''}
-    <div class="grid2" style="margin-top:8px">
-      <div class="field"><label>受取方法</label><select ${dis} onchange="saveHr('${esc(key)}','payment',this.value)">${PAYMENT.map(p=>`<option ${p===(h.payment||'')?'selected':''}>${p||'未設定'}</option>`).join('')}</select></div>
-      <div class="field"><label>連絡先</label><input ${dis} value="${esc(h.contact||'')}" placeholder="LINE名・メール・電話" onblur="saveHr('${esc(key)}','contact',this.value)"></div>
-    </div>
-    <div class="field"><label>紹介者（紹介経由の人事なら記入。着座ごとに紹介者へ商談報酬 ${yen(REFERRER_FEE)}、初回着座時に紹介報酬 ${yen(REFERRAL_BONUS)}）</label><input ${dis} list="referrers" value="${esc(h.referrer||'')}" placeholder="例：位野花岳彦（アドインテ）" onblur="saveHr('${esc(key)}','referrer',this.value)"><datalist id="referrers">${[...new Set((A.hr||[]).map(x=>x.referrer).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join('')}</datalist></div>
-    <div class="field"><label>メモ</label><textarea rows="2" ${dis} onblur="saveHr('${esc(key)}','memo',this.value)">${esc(h.memo||'')}</textarea></div>
-    <div class="sec" style="margin:18px 0 8px"><h2 style="font-size:15px">つないだ企業 <span class="mini">${h.rs.length}件 ・ 協力費累計 ${h.fee?yen(h.fee):'—'}</span></h2>
-      <button class="ghost" onclick="closeHr();setTab('leads');leadFilter='すべて';document.getElementById('lead-q').value='${esc(h.name)}';renderAdmin()">つなぎタブで開く</button></div>
-    ${h.rs.length?`<div class="tablewrap"><table style="min-width:460px"><thead><tr><th>企業</th><th>興味度</th><th>状況</th><th>商談日</th></tr></thead><tbody>${h.rs.slice().sort((a,b)=>((b.date||b.ts)>(a.date||a.ts)?1:-1)).map(r=>`<tr><td><div class="vn-logo">${(vmap[r.vendorId]||{}).logo?`<img class="vlogo" src="${esc(vmap[r.vendorId].logo)}" alt="" loading="lazy" onerror="this.remove()">`:''}<div><b>${esc((vmap[r.vendorId]||{}).company||r.vendorName)}</b><div class="mini">${esc(r.vendorName)}</div></div></div></td><td><span class="tag ${RATE_CLASS[r.rate]||'cold'}">${RATE_LABEL[r.rate]||'—'}</span></td><td><select class="st s${Math.max(0,STATUS.indexOf(r.status||'未対応'))}" onchange="setStatus('${r.id}','${r.vendorId}',this.value,this)">${STATUS.map(st=>`<option ${st===(r.status||'未対応')?'selected':''}>${st}</option>`).join('')}</select></td><td><input type="date" class="cell" value="${esc((r.date||'').slice(0,10).replace(/\//g,'-'))}" onchange="saveResp('${r.id}','${r.vendorId}','date',this.value.replace(/-/g,'/'))"></td></tr>`).join('')}</tbody></table></div>`:'<div class="mini">まだ企業をつないでいません。</div>'}
-    ${h.unsaved?'<p class="mini" style="margin-top:10px">この人事はまだ人事一覧に保存されていません。「回答から一覧を作り直す」を押すと編集できます。</p>':''}`;
+    <div id="hr-p-edit" hidden>${hrForm(h,false)}</div>`;
   document.getElementById('hrModal').hidden=false;document.body.classList.add('modal-open');
 }
+function hrSub(btn,id){document.querySelectorAll('#hr-m-body .tabs [role=tab]').forEach(b=>b.setAttribute('aria-selected',String(b===btn)));['hr-p-meet','hr-p-edit'].forEach(p=>document.getElementById(p).hidden=p!==id);}
+function openVendorEdit(id){
+  const x=A.vendors.find(v=>v.id===id);if(!x)return;
+  document.getElementById('hr-m-body').innerHTML=`<div class="eyebrow">ベンダー編集</div><h2 class="h-title" style="font-size:20px">${esc(x.company||x.name)}</h2>
+    <div class="grid2">
+      <div class="field"><label>サービス名</label>${inp('ve-name',x.name)}</div><div class="field"><label>会社名</label>${inp('ve-company',x.company)}</div>
+      <div class="field"><label>カテゴリ</label>${sel('ve-cat',AREAS,x.cat)}</div><div class="field"><label>案件元</label>${sel('ve-src',['自社獲得','DYM'],x.src)}</div>
+      <div class="field"><label>単価</label>${inp('ve-price',x.price,'例：50,000')}</div><div class="field"><label>会いたい役職</label>${inp('ve-role',x.role,'例：人事部長以上')}</div>
+    </div>
+    <div class="field"><label>一行説明（人事向け）</label>${inp('ve-desc',x.desc)}</div>
+    <div class="field"><label>向いている企業</label>${inp('ve-for',x.for)}</div>
+    <div class="field"><label>詳細説明（カードを押すと表示）</label><textarea id="ve-detail" rows="8">${esc(x.detail||'')}</textarea></div>
+    <div class="grid2"><div class="field"><label>ロゴ画像URL</label>${inp('ve-logo',x.logo,'https://…/logo.png')}</div><div class="field"><label>条件メモ（運営のみ）</label>${inp('ve-cond',x.cond)}</div></div>
+    <button class="primary" style="margin-top:14px" onclick="saveVendorEdit('${x.id}')">ベンダーを保存</button>`;
+  document.getElementById('hrModal').hidden=false;document.body.classList.add('modal-open');
+}
+async function saveVendorEdit(id){
+  const g=k=>(document.getElementById('ve-'+k)||{}).value||'';const fields={name:g('name'),company:g('company'),cat:g('cat'),src:g('src'),price:g('price'),role:g('role'),desc:g('desc'),for:g('for'),detail:g('detail'),logo:g('logo'),cond:g('cond')};
+  if(!fields.name||!fields.desc){toast('サービス名と一行説明は必須です');return;}
+  const x=A.vendors.find(v=>v.id===id);if(x)Object.assign(x,fields);renderAdmin();
+  try{await api('update_vendor',{token,id,fields});toast('保存しました');closeHr();}catch(e){toast('保存できませんでした：'+e.message);}
+}
+function openNewHr(){document.getElementById('hr-m-body').innerHTML=`<div class="eyebrow">新規登録</div><h2 class="h-title" style="font-size:20px;margin-bottom:6px">人事を追加</h2>${hrForm({areas:[],tags:[]},true)}`;document.getElementById('hrModal').hidden=false;document.body.classList.add('modal-open');}
+function openMeetModal(){document.getElementById('hr-m-body').innerHTML=`<div class="eyebrow">新規登録</div><h2 class="h-title" style="font-size:20px">商談を追加</h2>${meetingForm({})}`;document.getElementById('hrModal').hidden=false;document.body.classList.add('modal-open');}
+function closeMeetModal(){closeHr();}
 function closeHr(){document.getElementById('hrModal').hidden=true;document.body.classList.remove('modal-open');curHr=null;}
 async function toggleTag(key,tag,btn){const h=(A.hr||[]).find(x=>x.key===key);if(!h)return;h.tags=h.tags||[];const on=h.tags.includes(tag);h.tags=on?h.tags.filter(t=>t!==tag):[...h.tags,tag];btn.setAttribute('aria-pressed',String(!on));renderHr();
   try{await api('update_hr',{token,key,fields:{tags:h.tags.join('、')}});store.set('jc_admin',{tok:token,d:A,t:Date.now()});toast('保存しました');}catch(e){toast('保存できませんでした：'+e.message);}}
@@ -977,7 +1076,7 @@ function renderAdmin(){
     :'<div class="mini" style="padding:6px 2px">承認待ちの申し込みはありません。</div>';
   document.getElementById('pcount').textContent=A.pending.length?`${A.pending.length}件`:'';
   // vendors
-  document.getElementById('vadmin').innerHTML=A.vendors.map(x=>`<div class="vrow"><div class="top"><span style="display:flex;align-items:center;gap:8px">${logoHtml(x)}<b>${esc(x.name)}</b></span><button class="pub ${x.published?'':'off'}" style="border:0;cursor:pointer" onclick="act('set_published','${x.id}','${x.published?'非掲載にしました':'掲載しました'}',{published:${!x.published}})">${x.published?'掲載中':'非掲載'}</button></div>
+  document.getElementById('vadmin').innerHTML=A.vendors.map(x=>`<div class="vrow"><div class="top"><span style="display:flex;align-items:center;gap:8px">${logoHtml(x)}<b>${esc(x.name)}</b><button class="del" onclick="openVendorEdit('${x.id}')">編集</button></span><button class="pub ${x.published?'':'off'}" style="border:0;cursor:pointer" onclick="act('set_published','${x.id}','${x.published?'非掲載にしました':'掲載しました'}',{published:${!x.published}})">${x.published?'掲載中':'非掲載'}</button></div>
     <div class="mini">${esc(x.company)} ・ ${esc(x.cat)} ・ ${esc(x.src)}${x.price?' ・ 単価 '+esc(x.price):''}${x.role?' ・ '+esc(x.role):''}</div><div>${esc(x.desc)}</div><div class="mini">向け：${esc(x.for)}</div>${x.cond?`<div class="mini cond">運営メモ：${esc(x.cond)}</div>`:''}<div class="mini">${x.detail?'詳細説明あり（'+x.detail.length+'字）':'<span style="color:#A32D1E">詳細説明なし</span>'}</div></div>`).join('');
   document.getElementById('vcount').textContent=`${A.vendors.length}社（掲載中 ${A.vendors.filter(x=>x.published).length} ・ DYM ${A.vendors.filter(x=>x.src==='DYM').length}）`;
   const ac=document.getElementById('a-cat');if(!ac.options.length)AREAS.forEach(a=>{const o=document.createElement('option');o.textContent=a;ac.appendChild(o);});
