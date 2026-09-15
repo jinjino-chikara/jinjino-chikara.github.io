@@ -188,7 +188,6 @@ td input.cell.wide{min-width:150px}
 .grow .vn b{font-weight:600}
 @media (max-width:640px){.grow{grid-template-columns:1fr auto}.grow .tag{grid-column:1/-1}}
 .empty{padding:28px;text-align:center;color:var(--faint);font-size:13.5px;background:#fff;border:1px dashed var(--line-2);border-radius:var(--radius)}
-.chips.tight{gap:4px;max-width:340px}
 .tag small{font-size:10px;opacity:.75;margin-left:5px;font-variant-numeric:tabular-nums}
 .cycle{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
 @media (max-width:720px){.cycle{grid-template-columns:1fr}}
@@ -223,6 +222,16 @@ details.more summary{cursor:pointer;color:var(--gold-2);font-size:13.5px;font-we
 details.more summary::-webkit-details-marker{display:none}
 details.more[open] summary{margin-bottom:4px}
 .mk{margin-right:3px;font-size:13px}
+.vchip{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line-2);border-radius:999px;padding:3px 9px 3px 4px;font-size:12px;color:var(--ink);line-height:1.2;white-space:nowrap}
+.vchip img,.vchip i{width:18px;height:18px;border-radius:50%;object-fit:contain;background:#fff;border:1px solid var(--line);flex:0 0 18px}
+.vchip i{display:inline-grid;place-items:center;font-style:normal;font-size:10px;font-weight:700;color:var(--navy);background:var(--bg-2)}
+.vchip span{font-weight:500}
+.vchip time{color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums}
+.vchip.seated{border-color:var(--navy);box-shadow:inset 3px 0 0 var(--navy)}
+.vchip.prog{border-color:var(--gold);box-shadow:inset 3px 0 0 var(--gold)}
+.chips.tight{gap:5px;max-width:380px}
+.vn-logo{display:flex;align-items:center;gap:8px;min-width:0}
+.vlogo{width:26px;height:26px;border-radius:6px;object-fit:contain;background:#fff;border:1px solid var(--line);flex:0 0 26px;padding:2px}
 .loading{color:var(--faint);font-size:13px;padding:24px;text-align:center}
 .err{background:#FDECEA;color:#A32D1E;border:1px solid #F1B7AE;border-radius:8px;padding:10px 14px;font-size:13.5px;margin-top:12px}
 .login{max-width:420px;margin:40px auto}
@@ -486,6 +495,7 @@ const INVOICE=["未請求","請求済","入金済"],PAYOUT=["未払い","支払�
 let curTab='leads';let leadFilter='未対応';
 const REFERRER_FEE=3000,REFERRAL_BONUS=10000;
 function hrRef(company,name){const h=(A.hr||[]).find(x=>x.key===String(company).trim()+'|'+String(name).trim());return h&&h.referrer?h.referrer:'';}
+function vchip(r,vmap,kind){const vd=vmap[r.vendorId]||{};const name=vd.company||r.vendorName;const logo=vd.logo?`<img src="${esc(vd.logo)}" alt="" loading="lazy" onerror="this.remove()">`:`<i>${esc((name||'?').slice(0,1))}</i>`;const d=r.date?`<time>${esc(kind==='seated'?r.date.slice(2,10):r.date.slice(5,10))}</time>`:'';return `<span class="vchip ${kind}" title="${esc(r.vendorName)}${r.date?' ・ '+esc(r.date):''}">${logo}<span>${esc(name)}</span>${d}</span>`;}
 function mark(company,name){const r=hrRef(company,name);return r?`<span class="mk" title="紹介：${esc(r)}">🌸</span>`:'';}
 const API=(window.CONFIG&&CONFIG.API_URL)||"";
 const LINE_URL=(window.CONFIG&&CONFIG.LINE_URL)||"#";
@@ -688,7 +698,7 @@ function renderLeads(L,vmap){
         <div class="cnt">${hot?`<span class="tag hot">ぜひ ${hot}</span>`:''}${warm?`<span class="tag warm">少し ${warm}</span>`:''}<span class="mini">${items.length}社</span></div></summary>
       ${items.map(x=>`<div class="grow">
         <span class="tag ${RATE_CLASS[x.rate]}">${RATE_LABEL[x.rate]}</span>
-        <div class="vn"><b>${esc(vmap[x.vendorId]?.company||x.vendorName)}</b><div class="mini">${esc(x.vendorName)}${vmap[x.vendorId]?' ・ '+esc(vmap[x.vendorId].cat)+' ・ '+esc(vmap[x.vendorId].src):''}${x.date?' ・ 商談 '+esc(x.date.slice(0,10)):''}</div></div>
+        <div class="vn vn-logo">${vmap[x.vendorId]?.logo?`<img class="vlogo" src="${esc(vmap[x.vendorId].logo)}" alt="" loading="lazy" onerror="this.remove()">`:''}<div><b>${esc(vmap[x.vendorId]?.company||x.vendorName)}</b><div class="mini">${esc(x.vendorName)}${vmap[x.vendorId]?' ・ '+esc(vmap[x.vendorId].cat)+' ・ '+esc(vmap[x.vendorId].src):''}${x.date?' ・ 商談 '+esc(x.date.slice(0,10)):''}</div></div></div>
         <div class="rowctl"><select class="st s${x.statusIdx}" onchange="setStatus('${x.id}','${x.vendorId}',this.value,this)">${STATUS.map(st=>`<option ${st===(x.status||'未対応')?'selected':''}>${st}</option>`).join('')}</select>
         ${(x.status==='日程調整中'||x.status==='着座済み')?`<input type="date" class="cell" title="商談日" value="${esc((x.date||'').slice(0,10).replace(/\//g,'-'))}" onchange="saveResp('${x.id}','${x.vendorId}','date',this.value.replace(/-/g,'/'))">`:''}</div>
       </div>`).join('')}
@@ -723,8 +733,8 @@ function renderHr(){
   document.getElementById('hr-count').textContent=`${rows.length}名`;
   const vn=r=>esc((vmap[r.vendorId]||{}).company||r.vendorName);
   document.getElementById('hr-rows').innerHTML=rows.length?rows.map(h=>{
-    const seatedHtml=h.seated.length?`<div class="chips tight">${h.seated.slice().sort((a,b)=>((b.date||'')>(a.date||'')?1:-1)).map(r=>`<span class="tag hot">${vn(r)}${r.date?`<small>${esc(r.date.slice(2,10))}</small>`:''}</span>`).join('')}</div>`:'<span class="mini">—</span>';
-    const progHtml=h.prog.length?`<div class="chips tight">${h.prog.map(r=>`<span class="tag warm">${vn(r)}${r.date?`<small>${esc(r.date.slice(5,10))}</small>`:''}</span>`).join('')}</div>`:'<span class="mini">—</span>';
+    const seatedHtml=h.seated.length?`<div class="chips tight">${h.seated.slice().sort((a,b)=>((b.date||'')>(a.date||'')?1:-1)).map(r=>vchip(r,vmap,'seated')).join('')}</div>`:'<span class="mini">—</span>';
+    const progHtml=h.prog.length?`<div class="chips tight">${h.prog.map(r=>vchip(r,vmap,'prog')).join('')}</div>`:'<span class="mini">—</span>';
     const tags=(h.tags||[]).map(t=>`<span class="tag tg-${HR_TAGS.indexOf(t)}">${esc(t)}</span>`).join(' ')||'<span class="mini">—</span>';
     return `<tr class="hrrow" onclick="openHr('${esc(h.key)}')">
       <td>${tags}</td>
@@ -760,7 +770,7 @@ function openHr(key){
     <div class="field"><label>メモ</label><textarea rows="2" ${dis} onblur="saveHr('${esc(key)}','memo',this.value)">${esc(h.memo||'')}</textarea></div>
     <div class="sec" style="margin:18px 0 8px"><h2 style="font-size:15px">つないだ企業 <span class="mini">${h.rs.length}件 ・ 協力費累計 ${h.fee?yen(h.fee):'—'}</span></h2>
       <button class="ghost" onclick="closeHr();setTab('leads');leadFilter='すべて';document.getElementById('lead-q').value='${esc(h.name)}';renderAdmin()">つなぎタブで開く</button></div>
-    ${h.rs.length?`<div class="tablewrap"><table style="min-width:460px"><thead><tr><th>企業</th><th>興味度</th><th>状況</th><th>商談日</th></tr></thead><tbody>${h.rs.slice().sort((a,b)=>((b.date||b.ts)>(a.date||a.ts)?1:-1)).map(r=>`<tr><td><b>${esc((vmap[r.vendorId]||{}).company||r.vendorName)}</b><div class="mini">${esc(r.vendorName)}</div></td><td><span class="tag ${RATE_CLASS[r.rate]||'cold'}">${RATE_LABEL[r.rate]||'—'}</span></td><td><select class="st s${Math.max(0,STATUS.indexOf(r.status||'未対応'))}" onchange="setStatus('${r.id}','${r.vendorId}',this.value,this)">${STATUS.map(st=>`<option ${st===(r.status||'未対応')?'selected':''}>${st}</option>`).join('')}</select></td><td><input type="date" class="cell" value="${esc((r.date||'').slice(0,10).replace(/\//g,'-'))}" onchange="saveResp('${r.id}','${r.vendorId}','date',this.value.replace(/-/g,'/'))"></td></tr>`).join('')}</tbody></table></div>`:'<div class="mini">まだ企業をつないでいません。</div>'}
+    ${h.rs.length?`<div class="tablewrap"><table style="min-width:460px"><thead><tr><th>企業</th><th>興味度</th><th>状況</th><th>商談日</th></tr></thead><tbody>${h.rs.slice().sort((a,b)=>((b.date||b.ts)>(a.date||a.ts)?1:-1)).map(r=>`<tr><td><div class="vn-logo">${(vmap[r.vendorId]||{}).logo?`<img class="vlogo" src="${esc(vmap[r.vendorId].logo)}" alt="" loading="lazy" onerror="this.remove()">`:''}<div><b>${esc((vmap[r.vendorId]||{}).company||r.vendorName)}</b><div class="mini">${esc(r.vendorName)}</div></div></div></td><td><span class="tag ${RATE_CLASS[r.rate]||'cold'}">${RATE_LABEL[r.rate]||'—'}</span></td><td><select class="st s${Math.max(0,STATUS.indexOf(r.status||'未対応'))}" onchange="setStatus('${r.id}','${r.vendorId}',this.value,this)">${STATUS.map(st=>`<option ${st===(r.status||'未対応')?'selected':''}>${st}</option>`).join('')}</select></td><td><input type="date" class="cell" value="${esc((r.date||'').slice(0,10).replace(/\//g,'-'))}" onchange="saveResp('${r.id}','${r.vendorId}','date',this.value.replace(/-/g,'/'))"></td></tr>`).join('')}</tbody></table></div>`:'<div class="mini">まだ企業をつないでいません。</div>'}
     ${h.unsaved?'<p class="mini" style="margin-top:10px">この人事はまだ人事一覧に保存されていません。「回答から一覧を作り直す」を押すと編集できます。</p>':''}`;
   document.getElementById('hrModal').hidden=false;document.body.classList.add('modal-open');
 }
@@ -799,7 +809,7 @@ function renderSales(){
   document.getElementById('s-rows').innerHTML=R.length?R.map(r=>{const cy=cycleOf(monthOf(r.date));const vOver=cy&&isOver(cy.vendorDue)&&(r.invoice||'未請求')!=='入金済';const hOver=cy&&isOver(cy.hrDue)&&(r.payout||'未払い')==='未払い';return `<tr class="${vOver||hOver?'late':''}">
     <td><input type="date" class="cell" value="${esc((r.date||'').slice(0,10).replace(/\//g,'-'))}" onchange="saveResp('${r.id}','${r.vendorId}','date',this.value.replace(/-/g,'/'))"></td>
     <td><b>${mark(r.company,r.name)}${esc(r.name)}</b><div class="mini">${esc(r.company)}</div></td>
-    <td>${esc(vmap[r.vendorId]?.company||r.vendorName)}<div class="mini">${esc(r.vendorName)}</div></td>
+    <td><div class="vn-logo">${vmap[r.vendorId]?.logo?`<img class="vlogo" src="${esc(vmap[r.vendorId].logo)}" alt="" loading="lazy" onerror="this.remove()">`:''}<div>${esc(vmap[r.vendorId]?.company||r.vendorName)}<div class="mini">${esc(r.vendorName)}</div></div></div></td>
     <td><input class="cell num" inputmode="numeric" value="${r.sales===''?'':r.sales}" onblur="saveResp('${r.id}','${r.vendorId}','sales',this.value.replace(/[^\d]/g,''))"></td>
     <td><input class="cell num" inputmode="numeric" value="${r.fee===''?'':r.fee}" onblur="saveResp('${r.id}','${r.vendorId}','fee',this.value.replace(/[^\d]/g,''))"></td>
     <td><input class="cell num" inputmode="numeric" value="${r.refFee===''||r.refFee==null?'':r.refFee}" placeholder="—" onblur="saveResp('${r.id}','${r.vendorId}','refFee',this.value.replace(/[^\d]/g,''))"></td>
