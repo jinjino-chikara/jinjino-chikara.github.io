@@ -189,6 +189,18 @@ td input.cell.wide{min-width:150px}
 .empty{padding:28px;text-align:center;color:var(--faint);font-size:13.5px;background:#fff;border:1px dashed var(--line-2);border-radius:var(--radius)}
 .chips.tight{gap:4px;max-width:340px}
 .tag small{font-size:10px;opacity:.75;margin-left:5px;font-variant-numeric:tabular-nums}
+.cycle{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+@media (max-width:720px){.cycle{grid-template-columns:1fr}}
+.cycle .c{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:12px 16px;display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.cycle .c b{font-family:var(--serif);color:var(--navy)}
+.cycle .c .due{font-size:20px;font-family:var(--serif);color:var(--navy);font-variant-numeric:tabular-nums}
+.cycle .c .due.over{color:#A32D1E}
+.batches{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:900px){.batches{grid-template-columns:1fr}}
+.over{color:#A32D1E;font-weight:600}
+tr.late td{background:#FFF6F4}
+.due-mini{font-size:11px;color:var(--faint);margin-top:2px;white-space:nowrap}
+.due-mini.over{color:#A32D1E}
 .loading{color:var(--faint);font-size:13px;padding:24px;text-align:center}
 .err{background:#FDECEA;color:#A32D1E;border:1px solid #F1B7AE;border-radius:8px;padding:10px 14px;font-size:13.5px;margin-top:12px}
 .login{max-width:420px;margin:40px auto}
@@ -361,13 +373,21 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
           <button class="ghost" onclick="copySalesTsv()">スプレッドシート用にコピー</button>
         </div></div>
         <div class="kpis" id="s-kpis" style="margin-top:0"></div>
-        <p class="mini" style="margin:12px 0 10px">「つなぎ状況」を着座済みにすると自動でここに並び、売上はベンダーの単価、協力費は5,000円が入ります。数字と状態は直接編集でき、その場で保存されます。</p>
+        <div class="cycle" id="s-cycle"></div>
+        <div class="batches">
+          <div><div class="sec" style="margin-top:18px"><h2>ベンダー別 請求一覧</h2></div>
+            <div class="tablewrap"><table style="min-width:420px"><thead><tr><th>ベンダー</th><th>件数</th><th>請求額</th><th>状況</th></tr></thead><tbody id="s-byvendor"></tbody></table></div></div>
+          <div><div class="sec" style="margin-top:18px"><h2>人事別 協力費 振込一覧</h2></div>
+            <div class="tablewrap"><table style="min-width:420px"><thead><tr><th>人事</th><th>件数</th><th>振込額</th><th>受取方法</th><th>状況</th></tr></thead><tbody id="s-byhr"></tbody></table></div></div>
+        </div>
+        <div class="sec" style="margin-top:22px"><h2>商談ごとの明細</h2></div>
+        <p class="mini" style="margin:-4px 0 10px">「つなぎ状況」を着座済みにすると自動でここに並び、売上はベンダーの単価、協力費は5,000円が入ります。数字と状態は直接編集でき、その場で保存されます。期限を過ぎて未入金・未払いの行は赤く表示します。</p>
         <div class="tablewrap"><table>
-          <thead><tr><th>商談日</th><th>人事</th><th>ベンダー</th><th>売上</th><th>協力費</th><th>粗利</th><th>ベンダー請求</th><th>人事支払</th><th>アンケート</th></tr></thead>
+          <thead><tr><th>商談日</th><th>人事</th><th>ベンダー</th><th>売上</th><th>協力費</th><th>粗利</th><th>ベンダー請求<div class="mini">入金期限</div></th><th>人事支払<div class="mini">支払期限</div></th><th>アンケート</th></tr></thead>
           <tbody id="s-rows"></tbody></table></div>
         <div class="sec"><h2>月別サマリー</h2></div>
         <div class="tablewrap"><table style="min-width:520px">
-          <thead><tr><th>月</th><th>着座</th><th>売上</th><th>協力費</th><th>粗利</th><th>未請求</th><th>未払い</th></tr></thead>
+          <thead><tr><th>商談月</th><th>着座</th><th>売上</th><th>協力費</th><th>粗利</th><th>入金期限</th><th>未入金</th><th>支払期限</th><th>未払い</th></tr></thead>
           <tbody id="s-months"></tbody></table></div>
       </div>
 
@@ -652,6 +672,18 @@ async function saveHr(key,field,value){const h=(A.hr||[]).find(x=>x.key===key);i
 async function addHr(){if(!v('h-company')||!v('h-name')){toast('会社名と氏名は必須です');return;}
   try{await api('add_hr',{token,hr:{company:v('h-company'),name:v('h-name'),role:v('h-role'),size:v('h-size'),contact:v('h-contact'),memo:v('h-memo')}});['h-company','h-name','h-role','h-size','h-contact','h-memo'].forEach(id=>document.getElementById(id).value='');toast('追加しました');loadAdmin();}catch(e){toast(e.message);}}
 function monthOf(d){return d?(d||'').slice(0,7).replace('/','-'):'日付不明';}
+// 祝日（2026年）。ここに無い日は平日扱い
+const JP_HOLIDAYS=new Set(['2026-01-01','2026-01-12','2026-02-11','2026-02-23','2026-03-20','2026-04-29','2026-05-03','2026-05-04','2026-05-05','2026-05-06','2026-07-20','2026-08-11','2026-09-21','2026-09-22','2026-09-23','2026-10-12','2026-11-03','2026-11-23','2027-01-01','2027-01-11','2027-02-11','2027-02-23','2027-03-21','2027-03-22']);
+function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function endOfMonth(y,m){return new Date(y,m+1,0);} // m:0-11
+function nthBizDay(y,m,n){let d=new Date(y,m,1),c=0;while(true){const wd=d.getDay();if(wd!==0&&wd!==6&&!JP_HOLIDAYS.has(ymd(d))){c++;if(c===n)return d;}d.setDate(d.getDate()+1);}}
+// 商談月 'YYYY-MM' → 締め・期限
+function cycleOf(month){if(!month||month==='日付不明')return null;const [y,m]=month.split('-').map(Number);
+  return {close:endOfMonth(y,m-1),vendorDue:endOfMonth(y,m),hrDue:nthBizDay(y,m+1,10)};}
+function fmtD(d){return d?`${d.getMonth()+1}/${d.getDate()}`:'—';}
+function fmtDY(d){return d?`${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`:'—';}
+const TODAY=new Date();TODAY.setHours(0,0,0,0);
+function isOver(d){return d&&d<TODAY;}
 function renderSales(){
   const rows=seated();const sel=document.getElementById('s-month');
   const months=[...new Set(rows.map(r=>monthOf(r.date)))].sort().reverse();
@@ -664,20 +696,37 @@ function renderSales(){
     .map(([t,n,s])=>`<div class="kpi"><small>${t}</small><b>${n}</b><div class="sub">${s}</div></div>`).join('');
   const vmap={};A.vendors.forEach(x=>vmap[x.id]=x);
   const opt=(arr,cur)=>arr.map(o=>`<option ${o===cur?'selected':''}>${o}</option>`).join('');
-  document.getElementById('s-rows').innerHTML=R.length?R.map(r=>`<tr>
+  document.getElementById('s-rows').innerHTML=R.length?R.map(r=>{const cy=cycleOf(monthOf(r.date));const vOver=cy&&isOver(cy.vendorDue)&&(r.invoice||'未請求')!=='入金済';const hOver=cy&&isOver(cy.hrDue)&&(r.payout||'未払い')==='未払い';return `<tr class="${vOver||hOver?'late':''}">
     <td><input type="date" class="cell" value="${esc((r.date||'').slice(0,10).replace(/\//g,'-'))}" onchange="saveResp('${r.id}','${r.vendorId}','date',this.value.replace(/-/g,'/'))"></td>
     <td><b>${esc(r.name)}</b><div class="mini">${esc(r.company)}</div></td>
     <td>${esc(vmap[r.vendorId]?.company||r.vendorName)}<div class="mini">${esc(r.vendorName)}</div></td>
     <td><input class="cell num" inputmode="numeric" value="${r.sales===''?'':r.sales}" onblur="saveResp('${r.id}','${r.vendorId}','sales',this.value.replace(/[^\d]/g,''))"></td>
     <td><input class="cell num" inputmode="numeric" value="${r.fee===''?'':r.fee}" onblur="saveResp('${r.id}','${r.vendorId}','fee',this.value.replace(/[^\d]/g,''))"></td>
     <td class="num pos">${yen((Number(r.sales)||0)-(Number(r.fee)||0))}</td>
-    <td><select class="cell st ${r.invoice==='入金済'?'s2':r.invoice==='請求済'?'s1':''}" onchange="saveResp('${r.id}','${r.vendorId}','invoice',this.value)">${opt(INVOICE,r.invoice||'未請求')}</select></td>
-    <td><select class="cell st ${r.payout==='支払済'?'s2':''}" onchange="saveResp('${r.id}','${r.vendorId}','payout',this.value)">${opt(PAYOUT,r.payout||'未払い')}</select></td>
+    <td><select class="cell st ${r.invoice==='入金済'?'s2':r.invoice==='請求済'?'s1':''}" onchange="saveResp('${r.id}','${r.vendorId}','invoice',this.value)">${opt(INVOICE,r.invoice||'未請求')}</select><div class="due-mini ${vOver?'over':''}">${cy?'期限 '+fmtD(cy.vendorDue)+(vOver?' 超過':''):''}</div></td>
+    <td><select class="cell st ${r.payout==='支払済'?'s2':''}" onchange="saveResp('${r.id}','${r.vendorId}','payout',this.value)">${opt(PAYOUT,r.payout||'未払い')}</select><div class="due-mini ${hOver?'over':''}">${cy?'期限 '+fmtD(cy.hrDue)+(hOver?' 超過':''):''}</div></td>
     <td><select class="cell st ${r.survey==='提出済'?'s2':''}" onchange="saveResp('${r.id}','${r.vendorId}','survey',this.value)">${opt(SURVEY,r.survey||'未提出')}</select></td>
-  </tr>`).join(''):`<tr><td colspan="9" class="mini" style="padding:24px;text-align:center">着座済みの商談がまだありません。「つなぎ」タブで状況を着座済みにすると、ここに並びます。</td></tr>`;
+  </tr>`;}).join(''):`<tr><td colspan="9" class="mini" style="padding:24px;text-align:center">着座済みの商談がまだありません。「つなぎ」タブで状況を着座済みにすると、ここに並びます。</td></tr>`;
   const byM={};rows.forEach(r=>{const k=monthOf(r.date);(byM[k]=byM[k]||[]).push(r);});
   document.getElementById('s-months').innerHTML=Object.keys(byM).sort((a,b)=>a==='日付不明'?1:b==='日付不明'?-1:(a<b?1:-1)).map(k=>{const a=byM[k];const sl=sum(a,'sales'),fe=sum(a,'fee');
-    return `<tr><td>${k==='日付不明'?k:k.replace('-','年')+'月'}</td><td class="num">${a.length}</td><td class="num">${yen(sl)}</td><td class="num">${yen(fe)}</td><td class="num pos">${yen(sl-fe)}</td><td class="num">${a.filter(r=>(r.invoice||'未請求')==='未請求').length}件</td><td class="num">${a.filter(r=>(r.payout||'未払い')==='未払い').length}件</td></tr>`;}).join('')||'<tr><td colspan="7" class="mini" style="padding:16px;text-align:center">—</td></tr>';
+    const cy=cycleOf(k);const ui=a.filter(r=>(r.invoice||'未請求')!=='入金済').length,up=a.filter(r=>(r.payout||'未払い')==='未払い').length;
+    return `<tr><td>${k==='日付不明'?k:k.replace('-','年')+'月'}</td><td class="num">${a.length}</td><td class="num">${yen(sl)}</td><td class="num">${yen(fe)}</td><td class="num pos">${yen(sl-fe)}</td><td class="${cy&&isOver(cy.vendorDue)&&ui?'over':''}">${cy?fmtDY(cy.vendorDue):'—'}</td><td class="num ${cy&&isOver(cy.vendorDue)&&ui?'over':''}">${ui}件</td><td class="${cy&&isOver(cy.hrDue)&&up?'over':''}">${cy?fmtDY(cy.hrDue):'—'}</td><td class="num ${cy&&isOver(cy.hrDue)&&up?'over':''}">${up}件</td></tr>`;}).join('')||'<tr><td colspan="9" class="mini" style="padding:16px;text-align:center">—</td></tr>';
+  renderCycle(m,R,vmap);
+}
+function renderCycle(m,R,vmap){
+  const cy=cycleOf(m);const el=document.getElementById('s-cycle');
+  if(!cy){el.innerHTML=m===''?'<div class="c" style="grid-column:1/-1"><span class="mini">月を選ぶと、その月の締め日・期限とベンダー別／人事別の一覧が出ます。</span></div>':'';}
+  else{const ui=R.filter(r=>(r.invoice||'未請求')!=='入金済').length,up=R.filter(r=>(r.payout||'未払い')==='未払い').length;
+    el.innerHTML=`<div class="c"><div><b>ベンダー請求</b><div class="mini">${fmtD(cy.close)} 締め → 翌月末 入金</div></div><div><div class="due ${isOver(cy.vendorDue)&&ui?'over':''}">${fmtDY(cy.vendorDue)}</div><div class="mini">${ui?ui+'件が未入金':'すべて入金済'}</div></div></div>
+      <div class="c"><div><b>人事 協力費支払</b><div class="mini">${fmtD(cy.close)} 締め → 翌々月10営業日</div></div><div><div class="due ${isOver(cy.hrDue)&&up?'over':''}">${fmtDY(cy.hrDue)}</div><div class="mini">${up?up+'名分が未払い':'すべて支払済'}</div></div></div>`;}
+  const byV={};R.forEach(r=>{const k=r.vendorId||r.vendorName;(byV[k]=byV[k]||{name:(vmap[r.vendorId]||{}).company||r.vendorName,rows:[]}).rows.push(r);});
+  const sum=(a,f)=>a.reduce((x,r)=>x+(Number(r[f])||0),0);
+  document.getElementById('s-byvendor').innerHTML=Object.values(byV).sort((a,b)=>sum(b.rows,'sales')-sum(a.rows,'sales')).map(g=>{const paid=g.rows.filter(r=>r.invoice==='入金済').length,billed=g.rows.filter(r=>r.invoice==='請求済').length;
+    return `<tr><td><b>${esc(g.name)}</b></td><td class="num">${g.rows.length}</td><td class="num">${yen(sum(g.rows,'sales'))}</td><td class="mini">${paid===g.rows.length?'<span class="tag" style="background:var(--ok-soft);color:var(--ok)">入金済</span>':`入金済 ${paid} ／ 請求済 ${billed} ／ 未請求 ${g.rows.length-paid-billed}`}</td></tr>`;}).join('')||'<tr><td colspan="4" class="mini" style="padding:14px;text-align:center">—</td></tr>';
+  const hrmap={};(A.hr||[]).forEach(h=>hrmap[h.key]=h);
+  const byH={};R.forEach(r=>{const k=r.company.trim()+'|'+r.name.trim();(byH[k]=byH[k]||{r,rows:[]}).rows.push(r);});
+  document.getElementById('s-byhr').innerHTML=Object.keys(byH).map(k=>{const g=byH[k];const h=hrmap[k]||{};const paid=g.rows.filter(r=>r.payout==='支払済').length,dec=g.rows.filter(r=>r.payout==='辞退').length;const amt=g.rows.filter(r=>r.payout!=='辞退').reduce((x,r)=>x+(Number(r.fee)||0),0);
+    return {html:`<tr><td><b>${esc(g.r.name)}</b><div class="mini">${esc(g.r.company)}</div></td><td class="num">${g.rows.length}</td><td class="num">${yen(amt)}</td><td class="mini">${esc(h.payment||'未設定')}</td><td class="mini">${paid+dec===g.rows.length?'<span class="tag" style="background:var(--ok-soft);color:var(--ok)">完了</span>':`未払い ${g.rows.length-paid-dec}`}</td></tr>`,amt};}).sort((a,b)=>b.amt-a.amt).map(x=>x.html).join('')||'<tr><td colspan="5" class="mini" style="padding:14px;text-align:center">—</td></tr>';
 }
 async function saveResp(id,vendorId,field,value){const r=A.responses.find(x=>x.id===id&&x.vendorId===vendorId);if(!r)return;
   const val=(field==='sales'||field==='fee')?(value===''?'':Number(value)):value;if(r[field]===val)return;r[field]=val;renderSales();
