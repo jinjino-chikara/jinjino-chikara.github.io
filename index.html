@@ -348,19 +348,19 @@ async function fetchOnce(url,opts){
   if(!t.trim().startsWith('{'))throw new Error('応答が不正でした（'+r.status+'）');
   const j=JSON.parse(t);if(!j.ok)throw Object.assign(new Error(j.error||'error'),{final:true});return j;
 }
-async function fetchJson(url,opts,tries=4){
+async function fetchJson(url,opts,tries=6){
   let last;
   for(let i=0;i<tries;i++){
     try{return await fetchOnce(url,opts);}catch(e){if(e.final)throw e;last=e;}
     if(i<tries-1)await new Promise(res=>setTimeout(res,150));
   }
-  throw last||new Error('通信に失敗しました');
+  throw new Error((last&&last.message)||'通信に失敗しました。もう一度お試しください');
 }
 // 読み取りは2本同時に投げて先に成功した方を使う（Google側の断続的な404対策）
 async function fetchRead(url){
   const attempt=()=>fetchOnce(url).catch(e=>{if(e.final)throw e;return new Promise((_,rej)=>setTimeout(()=>rej(e),4000));});
   try{return await Promise.any([attempt(),new Promise(r=>setTimeout(r,250)).then(attempt)]);}
-  catch(e){const err=(e&&e.errors&&e.errors[0])||e;if(err&&err.final)throw err;return fetchJson(url,undefined,3);}
+  catch(e){const err=(e&&e.errors&&e.errors[0])||e;if(err&&err.final)throw err;return fetchJson(url,undefined,5);}
 }
 async function api(action,payload){
   if(!API)throw new Error('config.js に API_URL が設定されていません');
@@ -416,7 +416,7 @@ async function goStep2(keep){
   const list=document.getElementById('vlist');
   if(!vendors.length){list.innerHTML='<div class="loading">サービス一覧を読み込んでいます…</div>';await vendorsReady;}
   if(!vendors.length){
-    list.innerHTML=`<div class="err">サービス一覧を読み込めませんでした。${esc(vendorsErr?vendorsErr.message:'')}<br><button class="ghost" style="margin-top:10px" onclick="loadVendors().then(goStep2)">もう一度読み込む</button></div>`;
+    list.innerHTML=`<div class="err">サービス一覧を読み込めませんでした。${esc(vendorsErr&&vendorsErr.message?vendorsErr.message:'通信が不安定です')}<br><button class="ghost" style="margin-top:10px" onclick="loadVendors().then(goStep2)">もう一度読み込む</button></div>`;
     updateCount();return;
   }
   let vs=vendors.slice();
@@ -452,7 +452,8 @@ function updateCount(){const n=Object.values(cur.ratings).filter(r=>r>=2).length
 async function submitAnswers(){
   const btn=document.getElementById('submit');btn.disabled=true;btn.textContent='送信中…';showErr('s2-err','');
   try{
-    const j=await api('submit',{company:v('f-company'),name:v('f-name'),role:v('f-role'),size:v('f-size'),areas:[...cur.areas],ratings:cur.ratings});
+    if(!cur.rid)cur.rid='r'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    const j=await api('submit',{rid:cur.rid,company:v('f-company'),name:v('f-name'),role:v('f-role'),size:v('f-size'),areas:[...cur.areas],ratings:cur.ratings});
     setSteps(3);document.getElementById('s2').hidden=true;document.getElementById('s3').hidden=false;
     const p=document.getElementById('picked');p.innerHTML=(j.picked||[]).map(n=>`<span>${esc(n)}</span>`).join('');
     if(!(j.picked||[]).length)document.querySelector('#s3 .lead').textContent='今回はご興味に合うサービスがなかったとのこと、承知しました。新しいサービスが加わった際に公式LINEでご案内します。';
@@ -471,7 +472,8 @@ async function submitVendor(){
   if(!need.every(id=>v(id))){showErr('vr-err','会社名・サービス名・一行説明・担当者・メールは必須です');return;}
   const btn=document.getElementById('vr-submit');btn.disabled=true;btn.textContent='送信中…';showErr('vr-err','');
   try{
-    await api('vendor_apply',{company:v('vr-company'),name:v('vr-name'),cat:v('vr-cat'),desc:v('vr-desc'),for:v('vr-for'),target:[...vrTarget],price:v('vr-price'),person:v('vr-person'),mail:v('vr-mail'),src:v('vr-src')});
+    if(!window._pid)window._pid='p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    await api('vendor_apply',{pid:window._pid,company:v('vr-company'),name:v('vr-name'),cat:v('vr-cat'),desc:v('vr-desc'),for:v('vr-for'),target:[...vrTarget],price:v('vr-price'),person:v('vr-person'),mail:v('vr-mail'),src:v('vr-src')});
     document.getElementById('vr-form').hidden=true;document.getElementById('vr-done').hidden=false;window.scrollTo({top:0});
   }catch(e){showErr('vr-err','送信できませんでした。'+e.message);btn.disabled=false;btn.textContent='掲載を申し込む';}
 }
