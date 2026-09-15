@@ -136,6 +136,11 @@ tr:last-child td{border-bottom:0}
 .brand b{white-space:nowrap}
 @media (max-width:480px){.brand span{display:none}.mode button{padding:6px 10px;font-size:12px}}
 img{max-width:100%}
+.vid{display:flex;gap:12px;align-items:center;min-width:0}
+.logo{width:40px;height:40px;border-radius:10px;object-fit:contain;background:var(--surface-2);flex:0 0 40px;padding:4px;box-sizing:border-box}
+.logo.ini{display:grid;place-items:center;font-weight:700;color:var(--muted);font-size:16px}
+.vco{font-size:12px;color:var(--faint);line-height:1.3}
+.cond{color:var(--hot)}
 .loading{color:var(--faint);font-size:13px;padding:24px;text-align:center}
 .err{background:var(--hot-soft);color:var(--hot);border-radius:8px;padding:10px 14px;font-size:13.5px;margin-top:12px}
 .login{max-width:420px;margin:40px auto}
@@ -275,6 +280,7 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
         <div class="row"><select id="a-cat"></select><select id="a-src"><option>自社獲得</option><option>DYM</option></select></div>
         <input id="a-desc" placeholder="人事に見せる一行説明">
         <div class="row"><input id="a-for" placeholder="向いている企業"><input id="a-price" placeholder="単価（例：50,000）"></div>
+        <div class="row"><input id="a-logo" placeholder="ロゴ画像URL（任意）"><input id="a-cond" placeholder="条件メモ（運営のみ表示）"></div>
         <button class="primary" style="margin-top:4px" onclick="addVendor()">追加する</button>
       </div>
       <p class="note">データはスプレッドシートの「提案シート_」で始まるタブに保存されています。直接編集しても反映されます。</p>
@@ -298,6 +304,7 @@ let vendors=[];          // 掲載中
 let A={vendors:[],responses:[],pending:[],proposed:{}}; // 管理用
 let token=sessionStorage.getItem('jc_token')||'';
 
+function logoHtml(x){const ini=esc((x.name||'?').slice(0,1));return x.logo?`<img class="logo" src="${esc(x.logo)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'logo ini',textContent:'${ini}'}))">`:`<span class="logo ini">${ini}</span>`;}
 function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 function v(id){return document.getElementById(id).value.trim();}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),2200);}
@@ -349,7 +356,7 @@ function goStep2(){
   else vs.sort((a,b)=>(cur.areas.has(b.cat)?1:0)-(cur.areas.has(a.cat)?1:0));
   list.innerHTML=vs.length?'':'<div class="loading">現在ご紹介できるサービスがありません。</div>';
   vs.forEach(x=>{const m=cur.areas.has(x.cat)||!!preV;const c=document.createElement('div');c.className='vcard'+(m?' match':'');
-    c.innerHTML=`<div class="vhead"><div class="vname">${esc(x.name)}</div><span class="vcat">${esc(x.cat)}</span></div><p class="vdesc">${esc(x.desc)}</p><div class="vfor">こんな企業向け：${esc(x.for)}</div>
+    c.innerHTML=`<div class="vhead"><div class="vid">${logoHtml(x)}<div><div class="vname">${esc(x.name)}</div><div class="vco">${esc(x.company||'')}</div></div></div><span class="vcat">${esc(x.cat)}</span></div><p class="vdesc">${esc(x.desc)}</p><div class="vfor">こんな企業向け：${esc(x.for)}</div>
       <div class="rate" role="group" aria-label="${esc(x.name)}の興味度">${[3,2,1].map(r=>`<button type="button" data-v="${r}" aria-pressed="false" onclick="rate('${x.id}',${r},this)">${RATE_LABEL[r]}</button>`).join('')}</div>`;
     list.appendChild(c);});
   updateCount();window.scrollTo({top:0});
@@ -419,8 +426,8 @@ function renderAdmin(){
     :'<div class="mini" style="padding:6px 2px">承認待ちの申し込みはありません。</div>';
   document.getElementById('pcount').textContent=A.pending.length?`${A.pending.length}件`:'';
   // vendors
-  document.getElementById('vadmin').innerHTML=A.vendors.map(x=>`<div class="vrow"><div class="top"><b>${esc(x.name)}</b><button class="pub ${x.published?'':'off'}" style="border:0;cursor:pointer" onclick="act('set_published','${x.id}','${x.published?'非掲載にしました':'掲載しました'}',{published:${!x.published}})">${x.published?'掲載中':'非掲載'}</button></div>
-    <div class="mini">${esc(x.company)} ・ ${esc(x.cat)} ・ ${esc(x.src)}${x.price?' ・ 単価 '+esc(x.price):''}${x.role?' ・ '+esc(x.role):''}</div><div>${esc(x.desc)}</div><div class="mini">向け：${esc(x.for)}</div></div>`).join('');
+  document.getElementById('vadmin').innerHTML=A.vendors.map(x=>`<div class="vrow"><div class="top"><span style="display:flex;align-items:center;gap:8px">${logoHtml(x)}<b>${esc(x.name)}</b></span><button class="pub ${x.published?'':'off'}" style="border:0;cursor:pointer" onclick="act('set_published','${x.id}','${x.published?'非掲載にしました':'掲載しました'}',{published:${!x.published}})">${x.published?'掲載中':'非掲載'}</button></div>
+    <div class="mini">${esc(x.company)} ・ ${esc(x.cat)} ・ ${esc(x.src)}${x.price?' ・ 単価 '+esc(x.price):''}${x.role?' ・ '+esc(x.role):''}</div><div>${esc(x.desc)}</div><div class="mini">向け：${esc(x.for)}</div>${x.cond?`<div class="mini cond">運営メモ：${esc(x.cond)}</div>`:''}</div>`).join('');
   document.getElementById('vcount').textContent=`${A.vendors.length}社（掲載中 ${A.vendors.filter(x=>x.published).length} ・ DYM ${A.vendors.filter(x=>x.src==='DYM').length}）`;
   const ac=document.getElementById('a-cat');if(!ac.options.length)AREAS.forEach(a=>{const o=document.createElement('option');o.textContent=a;ac.appendChild(o);});
   renderPropose();
@@ -432,7 +439,7 @@ async function setStatus(id,vendorId,status,sel){
 async function act(action,id,msg,extra){try{await api(action,{token,id,...(extra||{})});toast(msg);loadAdmin();}catch(e){toast(e.message);}}
 async function addVendor(){
   if(!v('a-name')||!v('a-desc')){toast('サービス名と一行説明は必須です');return;}
-  try{await api('add_vendor',{token,vendor:{name:v('a-name'),company:v('a-company'),cat:v('a-cat'),desc:v('a-desc'),for:v('a-for'),price:v('a-price'),src:v('a-src')}});['a-name','a-company','a-desc','a-for','a-price'].forEach(id=>document.getElementById(id).value='');toast('追加しました');loadAdmin();}
+  try{await api('add_vendor',{token,vendor:{name:v('a-name'),company:v('a-company'),cat:v('a-cat'),desc:v('a-desc'),for:v('a-for'),price:v('a-price'),src:v('a-src'),logo:v('a-logo'),cond:v('a-cond')}});['a-name','a-company','a-desc','a-for','a-price','a-logo','a-cond'].forEach(id=>document.getElementById(id).value='');toast('追加しました');loadAdmin();}
   catch(e){toast(e.message);}
 }
 /* 提案 */
@@ -460,7 +467,7 @@ function renderPropose(){
 ${vd.desc}
 こんな企業向け：${vd.for}
 
-少しでも気になる場合は、下記から「聞いてみたい」を選んでください（30秒）。日程調整は弊社が行います。商談後のアンケートにご協力いただくと、協力費5,000円をお支払いします。
+少しでも気になる場合は、下記から「聞いてみたい」を選んでください（30秒）。日程はこのLINEで弊社からご案内します。商談後のアンケートにご協力いただくと、協力費5,000円をお支払いします。
 ▶ ${link}
 
 ご不要の場合はそのままで結構です。`:'';
