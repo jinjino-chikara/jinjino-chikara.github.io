@@ -222,6 +222,7 @@ details.more{margin-top:16px;border:1px dashed var(--line-2);border-radius:var(-
 details.more summary{cursor:pointer;color:var(--gold-2);font-size:13.5px;font-weight:500;list-style:none}
 details.more summary::-webkit-details-marker{display:none}
 details.more[open] summary{margin-bottom:4px}
+.mk{margin-right:3px;font-size:13px}
 .loading{color:var(--faint);font-size:13px;padding:24px;text-align:center}
 .err{background:#FDECEA;color:#A32D1E;border:1px solid #F1B7AE;border-radius:8px;padding:10px 14px;font-size:13.5px;margin-top:12px}
 .login{max-width:420px;margin:40px auto}
@@ -484,6 +485,8 @@ const STATUS=["未対応","日程調整中","着座済み","見送り"];
 const INVOICE=["未請求","請求済","入金済"],PAYOUT=["未払い","支払済","辞退"],SURVEY=["未提出","提出済"],PAYMENT=["","個人口座","法人口座","辞退"];
 let curTab='leads';let leadFilter='未対応';
 const REFERRER_FEE=3000,REFERRAL_BONUS=10000;
+function hrRef(company,name){const h=(A.hr||[]).find(x=>x.key===String(company).trim()+'|'+String(name).trim());return h&&h.referrer?h.referrer:'';}
+function mark(company,name){const r=hrRef(company,name);return r?`<span class="mk" title="紹介：${esc(r)}">🌸</span>`:'';}
 const API=(window.CONFIG&&CONFIG.API_URL)||"";
 const LINE_URL=(window.CONFIG&&CONFIG.LINE_URL)||"#";
 const q=new URLSearchParams(location.search);
@@ -681,7 +684,7 @@ function renderLeads(L,vmap){
   el.innerHTML=keys.map((k,i)=>{const g=groups[k];const h=g.h;const items=g.items.sort((a,b)=>b.rate-a.rate);
     const hot=items.filter(x=>x.rate===3).length,warm=items.length-hot;
     return `<details class="group" ${i<8?'open':''}>
-      <summary><div class="who"><b>${esc(h.name)}</b><span class="mini">　${esc(h.role)}</span><div class="mini">${esc(h.company)} ・ ${esc(h.size)} ・ 回答 ${esc(h.ts.slice(0,10))}</div></div>
+      <summary><div class="who"><b>${mark(h.company,h.name)}${esc(h.name)}</b><span class="mini">　${esc(h.role)}</span><div class="mini">${esc(h.company)} ・ ${esc(h.size)} ・ 回答 ${esc(h.ts.slice(0,10))}</div></div>
         <div class="cnt">${hot?`<span class="tag hot">ぜひ ${hot}</span>`:''}${warm?`<span class="tag warm">少し ${warm}</span>`:''}<span class="mini">${items.length}社</span></div></summary>
       ${items.map(x=>`<div class="grow">
         <span class="tag ${RATE_CLASS[x.rate]}">${RATE_LABEL[x.rate]}</span>
@@ -726,7 +729,7 @@ function renderHr(){
     return `<tr class="hrrow" onclick="openHr('${esc(h.key)}')">
       <td>${tags}</td>
       <td><b>${esc(h.company)}</b><div class="mini">${esc(h.size||'')}${h.headcount?'（'+esc(h.headcount)+'）':''}</div></td>
-      <td>${esc(h.name)}${h.referrer?`<span class="tag warm" style="margin-left:6px;font-size:10.5px">紹介</span>`:''}<div class="mini">${esc(h.role||'')}${h.referrer?' ・ 紹介：'+esc(h.referrer):''}</div></td>
+      <td>${h.referrer?`<span class="mk" title="紹介：${esc(h.referrer)}">🌸</span>`:''}${esc(h.name)}<div class="mini">${esc(h.role||'')}${h.referrer?' ・ 紹介：'+esc(h.referrer):''}</div></td>
       <td class="mini num">${esc(h.newgrad||'—')} / ${esc(h.midcareer||'—')}</td>
       <td class="mini">${esc((h.areas||[]).join('、'))}</td>
       <td>${seatedHtml}</td>
@@ -742,7 +745,7 @@ function openHr(key){
   const dis=h.unsaved?'disabled':'';
   const row=(l,v)=>`<div class="kv"><span>${l}</span><b>${esc(v||'—')}</b></div>`;
   document.getElementById('hr-m-body').innerHTML=`
-    <div class="vhead" style="margin-bottom:8px"><div><div class="vname">${esc(h.name)}<span class="mini">　${esc(h.role||'')}</span></div><div class="vco">${esc(h.company)}${h.hp?` ・ <a href="${esc(h.hp)}" target="_blank" rel="noopener">HP</a>`:''}</div></div>
+    <div class="vhead" style="margin-bottom:8px"><div><div class="vname">${h.referrer?'🌸 ':''}${esc(h.name)}<span class="mini">　${esc(h.role||'')}</span></div><div class="vco">${esc(h.company)}${h.hp?` ・ <a href="${esc(h.hp)}" target="_blank" rel="noopener">HP</a>`:''}</div></div>
       <div class="chips" id="hr-m-tags">${HR_TAGS.map((t,i)=>`<button type="button" class="chip tg-${i}" aria-pressed="${(h.tags||[]).includes(t)}" ${dis} onclick="toggleTag('${esc(key)}','${t}',this)">${t}</button>`).join('')}</div></div>
     <div class="kvs">
       ${row('従業員規模',h.size+(h.headcount?'（'+h.headcount+'）':''))}${row('年間採用 新卒',h.newgrad)}${row('年間採用 中途',h.midcareer)}${row('苦戦している職種',h.hardjob)}
@@ -795,7 +798,7 @@ function renderSales(){
   const opt=(arr,cur)=>arr.map(o=>`<option ${o===cur?'selected':''}>${o}</option>`).join('');
   document.getElementById('s-rows').innerHTML=R.length?R.map(r=>{const cy=cycleOf(monthOf(r.date));const vOver=cy&&isOver(cy.vendorDue)&&(r.invoice||'未請求')!=='入金済';const hOver=cy&&isOver(cy.hrDue)&&(r.payout||'未払い')==='未払い';return `<tr class="${vOver||hOver?'late':''}">
     <td><input type="date" class="cell" value="${esc((r.date||'').slice(0,10).replace(/\//g,'-'))}" onchange="saveResp('${r.id}','${r.vendorId}','date',this.value.replace(/-/g,'/'))"></td>
-    <td><b>${esc(r.name)}</b><div class="mini">${esc(r.company)}</div></td>
+    <td><b>${mark(r.company,r.name)}${esc(r.name)}</b><div class="mini">${esc(r.company)}</div></td>
     <td>${esc(vmap[r.vendorId]?.company||r.vendorName)}<div class="mini">${esc(r.vendorName)}</div></td>
     <td><input class="cell num" inputmode="numeric" value="${r.sales===''?'':r.sales}" onblur="saveResp('${r.id}','${r.vendorId}','sales',this.value.replace(/[^\d]/g,''))"></td>
     <td><input class="cell num" inputmode="numeric" value="${r.fee===''?'':r.fee}" onblur="saveResp('${r.id}','${r.vendorId}','fee',this.value.replace(/[^\d]/g,''))"></td>
@@ -841,7 +844,7 @@ function renderCycle(m,R,vmap){
   document.getElementById('s-byref').innerHTML=Object.keys(byRef).map(n=>{const g=byRef[n];const bonus=g.newHr.size*REFERRAL_BONUS;return `<tr><td><b>${esc(n)}</b></td><td class="num">${yen(bonus)}<div class="mini">${g.newHr.size}名</div></td><td class="num">${yen(g.fee)}<div class="mini">${g.meet}件</div></td><td class="num pos">${yen(bonus+g.fee)}</td></tr>`;}).join('')||'<tr><td colspan="4" class="mini" style="padding:14px;text-align:center">紹介経由の着座はありません</td></tr>';
   const byH={};R.forEach(r=>{const k=r.company.trim()+'|'+r.name.trim();(byH[k]=byH[k]||{r,rows:[]}).rows.push(r);});
   document.getElementById('s-byhr').innerHTML=Object.keys(byH).map(k=>{const g=byH[k];const h=hrmap[k]||{};const paid=g.rows.filter(r=>r.payout==='支払済').length,dec=g.rows.filter(r=>r.payout==='辞退').length;const amt=g.rows.filter(r=>r.payout!=='辞退').reduce((x,r)=>x+(Number(r.fee)||0),0);
-    return {html:`<tr><td><b>${esc(g.r.name)}</b><div class="mini">${esc(g.r.company)}</div></td><td class="num">${g.rows.length}</td><td class="num">${yen(amt)}</td><td class="mini">${esc(h.payment||'未設定')}</td><td class="mini">${paid+dec===g.rows.length?'<span class="tag" style="background:var(--ok-soft);color:var(--ok)">完了</span>':`未払い ${g.rows.length-paid-dec}`}</td></tr>`,amt};}).sort((a,b)=>b.amt-a.amt).map(x=>x.html).join('')||'<tr><td colspan="5" class="mini" style="padding:14px;text-align:center">—</td></tr>';
+    return {html:`<tr><td><b>${mark(g.r.company,g.r.name)}${esc(g.r.name)}</b><div class="mini">${esc(g.r.company)}</div></td><td class="num">${g.rows.length}</td><td class="num">${yen(amt)}</td><td class="mini">${esc(h.payment||'未設定')}</td><td class="mini">${paid+dec===g.rows.length?'<span class="tag" style="background:var(--ok-soft);color:var(--ok)">完了</span>':`未払い ${g.rows.length-paid-dec}`}</td></tr>`,amt};}).sort((a,b)=>b.amt-a.amt).map(x=>x.html).join('')||'<tr><td colspan="5" class="mini" style="padding:14px;text-align:center">—</td></tr>';
 }
 async function saveResp(id,vendorId,field,value){const r=A.responses.find(x=>x.id===id&&x.vendorId===vendorId);if(!r)return;
   const val=(field==='sales'||field==='fee'||field==='refFee')?(value===''?'':Number(value)):value;if(r[field]===val)return;r[field]=val;renderSales();
