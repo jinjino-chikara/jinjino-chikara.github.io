@@ -167,6 +167,26 @@ td input.cell.num{width:92px;text-align:right;font-variant-numeric:tabular-nums}
 td input.cell.wide{min-width:150px}
 .num{font-variant-numeric:tabular-nums}
 .pos{color:var(--ok);font-weight:600}
+.filterbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 12px}
+.filterbar input{width:240px;padding:8px 10px}
+.seg{display:inline-flex;background:var(--bg-2);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;color:var(--muted);padding:6px 12px;border-radius:999px;font-size:13px;font-weight:500;display:inline-flex;gap:6px;align-items:center}
+.seg button b{font-size:11px;background:var(--surface-2);color:var(--muted);border-radius:999px;padding:0 7px;font-variant-numeric:tabular-nums}
+.seg button[aria-pressed="true"]{background:var(--navy);color:#fff;font-weight:700}
+.seg button[aria-pressed="true"] b{background:rgba(255,255,255,.18);color:#fff}
+.groups{display:grid;gap:10px}
+.group{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.group summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;flex-wrap:wrap}
+.group summary::-webkit-details-marker{display:none}
+.group summary .who b{font-family:var(--serif);font-size:15.5px;color:var(--navy)}
+.group summary .who .mini{margin-top:1px}
+.group summary .cnt{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.group[open] summary{border-bottom:1px solid var(--line);background:var(--bg-2)}
+.grow{display:grid;grid-template-columns:auto 1fr auto;gap:10px 14px;align-items:center;padding:10px 16px;border-top:1px solid var(--line)}
+.grow:first-of-type{border-top:0}
+.grow .vn b{font-weight:600}
+@media (max-width:640px){.grow{grid-template-columns:1fr auto}.grow .tag{grid-column:1/-1}}
+.empty{padding:28px;text-align:center;color:var(--faint);font-size:13.5px;background:#fff;border:1px dashed var(--line-2);border-radius:var(--radius)}
 .loading{color:var(--faint);font-size:13px;padding:24px;text-align:center}
 .err{background:#FDECEA;color:#A32D1E;border:1px solid #F1B7AE;border-radius:8px;padding:10px 14px;font-size:13.5px;margin-top:12px}
 .login{max-width:420px;margin:40px auto}
@@ -285,10 +305,12 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
         <button class="ghost" onclick="loadAdmin()">更新</button>
         <button class="ghost" onclick="copyTsv()">スプレッドシート用にコピー</button>
       </div></div>
-      <p class="mini" style="margin:-4px 0 10px">人事1名×ベンダー1社が1行。「ぜひ聞きたい」を上に。状態を変えるとシートに保存されます。</p>
-      <div class="tablewrap"><table>
-        <thead><tr><th>興味度</th><th>人事の方</th><th>会社 / 規模</th><th>ベンダー</th><th>回答日</th><th>つなぎ状況</th></tr></thead>
-        <tbody id="leads"></tbody></table></div>
+      <div class="filterbar">
+        <div class="seg" id="lead-seg"></div>
+        <input id="lead-q" placeholder="人事名・会社名で絞り込み" oninput="renderAdmin()">
+      </div>
+      <p class="mini" style="margin:0 0 10px">人事ごとにまとめています。ベンダー行の状況を変えるとその場で保存され、次の段階へ移動します。</p>
+      <div id="lead-groups" class="groups"></div>
 
       <div class="sec"><h2>掲載申し込み（承認待ち）</h2><span class="mini" id="pcount"></span></div>
       <div class="vendor-admin" id="pending"></div>
@@ -387,7 +409,7 @@ const RATE_LABEL={3:"ぜひ聞きたい",2:"少し聞いてみたい",1:"今は�
 const RATE_CLASS={3:"hot",2:"warm",1:"cold"};
 const STATUS=["未対応","日程調整中","着座済み","見送り"];
 const INVOICE=["未請求","請求済","入金済"],PAYOUT=["未払い","支払済","辞退"],SURVEY=["未提出","提出済"],PAYMENT=["","個人口座","法人口座","辞退"];
-let curTab='leads';
+let curTab='leads';let leadFilter='未対応';
 const API=(window.CONFIG&&CONFIG.API_URL)||"";
 const LINE_URL=(window.CONFIG&&CONFIG.LINE_URL)||"#";
 const q=new URLSearchParams(location.search);
@@ -401,24 +423,33 @@ function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt
 function v(id){return document.getElementById(id).value.trim();}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),2200);}
 function showErr(id,m){document.getElementById(id).innerHTML=m?`<div class="err">${esc(m)}</div>`:'';}
-async function fetchOnce(url,opts){
-  const r=await fetch(url,opts);const t=await r.text();
-  if(!t.trim().startsWith('{'))throw new Error('応答が不正でした（'+r.status+'）');
-  const j=JSON.parse(t);if(!j.ok)throw Object.assign(new Error(j.error||'error'),{final:true});return j;
+async function fetchOnce(url,opts,timeoutMs){
+  const ctl=new AbortController();const tm=setTimeout(()=>ctl.abort(),timeoutMs||12000);
+  try{
+    const r=await fetch(url,{...(opts||{}),signal:ctl.signal});const t=await r.text();
+    if(!t.trim().startsWith('{'))throw new Error('応答が不正でした（'+r.status+'）');
+    const j=JSON.parse(t);if(!j.ok)throw Object.assign(new Error(j.error||'error'),{final:true});return j;
+  }catch(e){if(e.name==='AbortError')throw new Error('応答がありません');throw e;}
+  finally{clearTimeout(tm);}
 }
+// 書き込み：順番に最大6回（サーバー側で二重登録を防いでいる）
 async function fetchJson(url,opts,tries=6){
   let last;
   for(let i=0;i<tries;i++){
-    try{return await fetchOnce(url,opts);}catch(e){if(e.final)throw e;last=e;}
-    if(i<tries-1)await new Promise(res=>setTimeout(res,150));
+    try{return await fetchOnce(url,opts,15000);}catch(e){if(e.final)throw e;last=e;}
+    if(i<tries-1)await new Promise(res=>setTimeout(res,200));
   }
   throw new Error((last&&last.message)||'通信に失敗しました。もう一度お試しください');
 }
-// 読み取りは2本同時に投げて先に成功した方を使う（Google側の断続的な404対策）
-async function fetchRead(url){
-  const attempt=()=>fetchOnce(url).catch(e=>{if(e.final)throw e;return new Promise((_,rej)=>setTimeout(()=>rej(e),4000));});
-  try{return await Promise.any([attempt(),new Promise(r=>setTimeout(r,250)).then(attempt)]);}
-  catch(e){const err=(e&&e.errors&&e.errors[0])||e;if(err&&err.final)throw err;return fetchJson(url,undefined,5);}
+// 読み取り：0秒・0.3秒・2.5秒・6秒に1本ずつ投げ、最初に成功したものを使う（遅延と404の両方に効く）
+function fetchRead(url){
+  return new Promise((resolve,reject)=>{
+    const delays=[0,300,2500,6000];let pending=delays.length,done=false,lastErr=null;
+    delays.forEach(d=>setTimeout(()=>{if(done)return;
+      fetchOnce(url,undefined,12000).then(j=>{if(!done){done=true;resolve(j);}})
+      .catch(e=>{if(e.final&&!done){done=true;reject(e);return;}lastErr=e;if(--pending===0&&!done){done=true;reject(new Error((lastErr&&lastErr.message)||'通信に失敗しました'));}});
+    },d));
+  });
 }
 async function api(action,payload){
   if(!API)throw new Error('config.js に API_URL が設定されていません');
@@ -562,6 +593,27 @@ function leads(){
 function setTab(t){curTab=t;document.querySelectorAll('.tabs [role=tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===t)));document.querySelectorAll('.tabp').forEach(p=>p.hidden=p.id!=='tab-'+t);try{sessionStorage.setItem('jc_tab',t);}catch(e){}}
 function yen(n){return n===''||n==null||isNaN(n)?'—':'¥'+Number(n).toLocaleString();}
 function seated(){return A.responses.filter(x=>x.status==='着座済み');}
+function renderLeads(L,vmap){
+  const counts={};STATUS.forEach(st=>counts[st]=0);L.forEach(x=>{counts[x.status||'未対応']=(counts[x.status||'未対応']||0)+1;});
+  document.getElementById('lead-seg').innerHTML=[...STATUS,'すべて'].map(st=>`<button type="button" aria-pressed="${leadFilter===st}" onclick="leadFilter='${st}';renderAdmin()">${st}<b>${st==='すべて'?L.length:(counts[st]||0)}</b></button>`).join('');
+  const q=(document.getElementById('lead-q').value||'').trim();
+  const rows=L.filter(x=>(leadFilter==='すべて'||(x.status||'未対応')===leadFilter)&&(!q||(x.company+x.name).includes(q)));
+  const groups={};rows.forEach(x=>{const k=x.company.trim()+'|'+x.name.trim();(groups[k]=groups[k]||{h:x,items:[]}).items.push(x);});
+  const keys=Object.keys(groups).sort((a,b)=>(groups[a].h.ts<groups[b].h.ts?1:-1));
+  const el=document.getElementById('lead-groups');
+  if(!keys.length){el.innerHTML=`<div class="empty">${leadFilter==='すべて'?'まだ回答がありません。':'「'+leadFilter+'」の人事はいません。'}</div>`;return;}
+  el.innerHTML=keys.map((k,i)=>{const g=groups[k];const h=g.h;const items=g.items.sort((a,b)=>b.rate-a.rate);
+    const hot=items.filter(x=>x.rate===3).length,warm=items.length-hot;
+    return `<details class="group" ${i<8?'open':''}>
+      <summary><div class="who"><b>${esc(h.name)}</b><span class="mini">　${esc(h.role)}</span><div class="mini">${esc(h.company)} ・ ${esc(h.size)} ・ 回答 ${esc(h.ts.slice(0,10))}</div></div>
+        <div class="cnt">${hot?`<span class="tag hot">ぜひ ${hot}</span>`:''}${warm?`<span class="tag warm">少し ${warm}</span>`:''}<span class="mini">${items.length}社</span></div></summary>
+      ${items.map(x=>`<div class="grow">
+        <span class="tag ${RATE_CLASS[x.rate]}">${RATE_LABEL[x.rate]}</span>
+        <div class="vn"><b>${esc(vmap[x.vendorId]?.company||x.vendorName)}</b><div class="mini">${esc(x.vendorName)}${vmap[x.vendorId]?' ・ '+esc(vmap[x.vendorId].cat)+' ・ '+esc(vmap[x.vendorId].src):''}${x.date?' ・ 商談 '+esc(x.date.slice(0,10)):''}</div></div>
+        <select class="st s${x.statusIdx}" onchange="setStatus('${x.id}','${x.vendorId}',this.value,this)">${STATUS.map(st=>`<option ${st===(x.status||'未対応')?'selected':''}>${st}</option>`).join('')}</select>
+      </div>`).join('')}
+    </details>`;}).join('');
+}
 function renderHr(){
   const q=(document.getElementById('hr-q').value||'').trim();
   const byKey={};A.responses.forEach(r=>{const k=r.company.trim()+'|'+r.name.trim();(byKey[k]=byKey[k]||[]).push(r);});
@@ -633,7 +685,8 @@ function renderAdmin(){
   document.getElementById('kpis').innerHTML=[['回答した人事',hrCount,'名'],['つなぎ候補',L.length,'件（ぜひ＋少し）'],['ぜひ聞きたい',L.filter(x=>x.rate===3).length,'件'],['着座済み',seated,'件']]
     .map(([t,n,s])=>`<div class="kpi"><small>${t}</small><b>${n}</b><div class="sub">${s}</div></div>`).join('');
   const vmap={};A.vendors.forEach(x=>vmap[x.id]=x);
-  document.getElementById('leads').innerHTML=L.length?L.map(x=>`<tr>
+  renderLeads(L,vmap);
+  if(false)document.getElementById('leads').innerHTML=L.length?L.map(x=>`<tr>
     <td><span class="tag ${RATE_CLASS[x.rate]}">${RATE_LABEL[x.rate]}</span></td>
     <td><b>${esc(x.name)}</b><div class="mini">${esc(x.role)}</div></td>
     <td>${esc(x.company)}<div class="mini">${esc(x.size)}</div></td>
@@ -657,7 +710,7 @@ function renderAdmin(){
   try{const t=sessionStorage.getItem('jc_tab');if(t&&t!==curTab)setTab(t);}catch(e){}
 }
 async function setStatus(id,vendorId,status,sel){
-  const r=A.responses.find(x=>x.id===id&&x.vendorId===vendorId);if(r){r.status=status;if(status==='着座済み'){const vd=A.vendors.find(x=>x.id===vendorId);if(!r.date)r.date=new Date().toISOString().slice(0,10).replace(/-/g,'/');if(r.sales===''||r.sales==null){const p=Number(String(vd?.price||'').replace(/[^\d]/g,''));if(p)r.sales=p;}if(r.fee===''||r.fee==null)r.fee=5000;r.invoice=r.invoice||'未請求';r.payout=r.payout||'未払い';r.survey=r.survey||'未提出';}}sel.className='st s'+STATUS.indexOf(status);renderSales();renderHr();
+  const r=A.responses.find(x=>x.id===id&&x.vendorId===vendorId);if(r){r.status=status;if(status==='着座済み'){const vd=A.vendors.find(x=>x.id===vendorId);if(!r.date)r.date=new Date().toISOString().slice(0,10).replace(/-/g,'/');if(r.sales===''||r.sales==null){const p=Number(String(vd?.price||'').replace(/[^\d]/g,''));if(p)r.sales=p;}if(r.fee===''||r.fee==null)r.fee=5000;r.invoice=r.invoice||'未請求';r.payout=r.payout||'未払い';r.survey=r.survey||'未提出';}}sel.className='st s'+STATUS.indexOf(status);renderSales();renderHr();setTimeout(renderAdmin,350);
   try{await api('status',{token,id,vendorId,status});store.set('jc_admin',{tok:token,d:A,t:Date.now()});toast('保存しました');}
   catch(e){toast('保存できませんでした：'+e.message);loadAdmin();}
 }
