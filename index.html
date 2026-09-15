@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>人事のチカラ ご提案シート</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#F3F5F8; --surface:#FFFFFF; --surface-2:#E9EDF3; --line:#D5DBE4;
+  --ink:#172033; --muted:#5B6474; --faint:#8A93A3;
+  --accent:#1B4FD8; --accent-ink:#FFFFFF; --accent-soft:#E4EBFB;
+  --hot:#C8480C; --hot-soft:#FBE7DC; --warm:#1B4FD8; --warm-soft:#E4EBFB; --cold:#6B7280; --cold-soft:#EEF0F3;
+  --ok:#0E7C5B; --ok-soft:#DDF3EA;
+  --shadow:0 1px 2px rgba(23,32,51,.06),0 6px 20px rgba(23,32,51,.06);
+  --radius:12px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F141C; --surface:#171E29; --surface-2:#1F2836; --line:#2B3648;
+    --ink:#EDF1F7; --muted:#A7B0C0; --faint:#6F7A8E;
+    --accent:#6D93F5; --accent-ink:#0F141C; --accent-soft:#1D2A47;
+    --hot:#F08A56; --hot-soft:#3A2416; --warm:#6D93F5; --warm-soft:#1D2A47; --cold:#9AA3B5; --cold-soft:#232C3B;
+    --ok:#4CC79A; --ok-soft:#153427;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F141C; --surface:#171E29; --surface-2:#1F2836; --line:#2B3648;
+  --ink:#EDF1F7; --muted:#A7B0C0; --faint:#6F7A8E;
+  --accent:#6D93F5; --accent-ink:#0F141C; --accent-soft:#1D2A47;
+  --hot:#F08A56; --hot-soft:#3A2416; --warm:#6D93F5; --warm-soft:#1D2A47; --cold:#9AA3B5; --cold-soft:#232C3B;
+  --ok:#4CC79A; --ok-soft:#153427;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans JP",system-ui,-apple-system,"Hiragino Sans",sans-serif;font-size:15px;line-height:1.65;padding-inline:16px;padding-block:0 48px}
+h1,h2,h3{font-family:"Zen Kaku Gothic New","Noto Sans JP",sans-serif;text-wrap:balance;margin:0;line-height:1.3}
+button{font:inherit;cursor:pointer}
+input,select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;width:100%}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:720px;margin:0 auto}
+.wide{max-width:1080px}
+/* top bar */
+.bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:14px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:baseline;gap:10px}
+.brand b{font-family:"Zen Kaku Gothic New",sans-serif;font-size:17px;letter-spacing:.02em}
+.brand span{font-size:12px;color:var(--faint);letter-spacing:.08em;text-transform:uppercase}
+.mode{display:flex;background:var(--surface-2);border-radius:999px;padding:3px;gap:2px}
+.mode button{border:0;background:transparent;color:var(--muted);padding:6px 14px;border-radius:999px;font-size:13px;font-weight:500}
+.mode button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+/* steps */
+.steps{display:flex;gap:6px;margin-block:22px 8px;font-size:12px;color:var(--faint);letter-spacing:.04em}
+.steps span{flex:1;padding-top:8px;border-top:3px solid var(--line)}
+.steps span.on{border-color:var(--accent);color:var(--accent);font-weight:700}
+.steps span.done{border-color:var(--ok);color:var(--ok)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow)}
+.lead{color:var(--muted);margin:8px 0 0;max-width:36em}
+.h-title{font-size:22px}
+.field{display:grid;gap:6px;margin-top:16px}
+.field label{font-size:13px;font-weight:500;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:520px){.grid2{grid-template-columns:1fr}}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 12px;font-size:13px}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:500}
+.primary{background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;padding:13px 20px;font-weight:700;font-size:15px;width:100%;margin-top:22px}
+.primary:disabled{opacity:.45;cursor:not-allowed}
+.ghost{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:10px;padding:9px 14px;font-size:13px}
+.hint{font-size:12px;color:var(--faint);margin-top:8px}
+/* vendor cards */
+.vlist{display:grid;gap:12px;margin-top:16px}
+.vcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;display:grid;gap:10px}
+.vcard.match{border-left:4px solid var(--accent)}
+.vhead{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.vname{font-weight:700;font-size:16px}
+.vcat{font-size:11px;letter-spacing:.06em;color:var(--muted);background:var(--surface-2);padding:3px 8px;border-radius:6px;white-space:nowrap}
+.vdesc{color:var(--muted);font-size:14px;margin:0}
+.vfor{font-size:12px;color:var(--faint)}
+.rate{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:4px}
+.rate button{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:8px;padding:9px 6px;font-size:13px;font-weight:500;line-height:1.3}
+.rate button[data-v="3"][aria-pressed="true"]{background:var(--hot-soft);border-color:var(--hot);color:var(--hot)}
+.rate button[data-v="2"][aria-pressed="true"]{background:var(--warm-soft);border-color:var(--warm);color:var(--warm)}
+.rate button[data-v="1"][aria-pressed="true"]{background:var(--cold-soft);border-color:var(--cold);color:var(--cold)}
+.sticky{position:sticky;bottom:0;background:linear-gradient(to top,var(--bg) 70%,transparent);padding-top:18px;margin-top:8px}
+.sum{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 16px;box-shadow:var(--shadow)}
+.sum b{font-size:18px;font-variant-numeric:tabular-nums}
+.sum small{color:var(--muted)}
+.sum .primary{width:auto;margin:0;padding:11px 18px}
+/* thanks */
+.thanks{text-align:center;padding-block:36px}
+.thanks .mark{width:56px;height:56px;border-radius:50%;background:var(--ok-soft);color:var(--ok);display:grid;place-items:center;margin:0 auto 16px;font-size:26px}
+.picked{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:16px}
+.picked span{background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:500}
+.line{display:inline-block;margin-top:22px;background:#06C755;color:#fff;border-radius:10px;padding:12px 22px;font-weight:700;text-decoration:none}
+/* admin */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:20px}
+@media (max-width:720px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+.kpi small{display:block;color:var(--muted);font-size:12px}
+.kpi b{font-size:26px;font-family:"Zen Kaku Gothic New",sans-serif;font-variant-numeric:tabular-nums}
+.kpi .sub{font-size:12px;color:var(--faint)}
+.sec{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:28px 0 10px;flex-wrap:wrap}
+.sec h2{font-size:17px}
+.sec .tools{display:flex;gap:8px;flex-wrap:wrap}
+.tablewrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius)}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:13.5px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:500;letter-spacing:.04em;background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+.tag{display:inline-block;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:500;white-space:nowrap}
+.tag.hot{background:var(--hot-soft);color:var(--hot)}
+.tag.warm{background:var(--warm-soft);color:var(--warm)}
+.tag.cold{background:var(--cold-soft);color:var(--cold)}
+.st{border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:12px;background:var(--surface);color:var(--ink);width:auto}
+.st.s2{border-color:var(--ok);color:var(--ok);background:var(--ok-soft)}
+.st.s1{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.mini{font-size:12px;color:var(--faint)}
+.vendor-admin{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:720px){.vendor-admin{grid-template-columns:1fr}}
+.vrow{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;display:grid;gap:4px;font-size:13.5px}
+.vrow .top{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.vrow .top b{font-size:14.5px}
+.vrow .del{border:0;background:transparent;color:var(--faint);font-size:12px;padding:2px 6px}
+.addform{background:var(--surface);border:1px dashed var(--line);border-radius:var(--radius);padding:16px;display:grid;gap:10px}
+.addform .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:600px){.addform .row{grid-template-columns:1fr}}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-size:13px;box-shadow:var(--shadow);opacity:0;transition:opacity .2s}
+.toast.show{opacity:1}
+.note{font-size:12px;color:var(--faint);margin-top:14px}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+<style>
+[hidden]{display:none!important}
+.brand b{white-space:nowrap}
+@media (max-width:480px){.brand span{display:none}.mode button{padding:6px 10px;font-size:12px}}
+img{max-width:100%}
+.loading{color:var(--faint);font-size:13px;padding:24px;text-align:center}
+.err{background:var(--hot-soft);color:var(--hot);border-radius:8px;padding:10px 14px;font-size:13.5px;margin-top:12px}
+.login{max-width:420px;margin:40px auto}
+textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--surface);color:var(--ink);resize:vertical}
+.hidden-mode .mode{display:none}
+.pub{font-size:11px;border-radius:6px;padding:2px 7px;background:var(--ok-soft);color:var(--ok)}
+.pub.off{background:var(--cold-soft);color:var(--cold)}
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <header class="bar">
+    <div class="brand"><b>人事のチカラ</b><span>ご提案シート</span></div>
+    <div class="mode" id="modebar" hidden>
+      <button id="mode-hr" onclick="setMode('hr')" aria-pressed="true">人事の方向け</button>
+      <button id="mode-vendor" onclick="setMode('vendor')" aria-pressed="false">ベンダー登録</button>
+      <button id="mode-admin" onclick="setMode('admin')" aria-pressed="false">管理</button>
+    </div>
+  </header>
+
+  <!-- ===== 人事 ===== -->
+  <section id="hr">
+    <div class="steps" id="steps"><span class="on">1 ご登録</span><span>2 サービスを選ぶ</span><span>3 完了</span></div>
+    <div id="s1" class="panel">
+      <h1 class="h-title" id="s1-title">本日はありがとうございました。</h1>
+      <p class="lead" id="s1-lead">お話しいただいた課題に合いそうなHRサービスを、いくつかまとめてご紹介します。まず基本情報をご入力ください。1分ほどで終わります。</p>
+      <div class="grid2">
+        <div class="field"><label for="f-company">会社名</label><input id="f-company" placeholder="株式会社〇〇" autocomplete="organization"></div>
+        <div class="field"><label for="f-name">お名前</label><input id="f-name" placeholder="山田 太郎" autocomplete="name"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label for="f-role">役職</label>
+          <select id="f-role"><option value="">選択してください</option><option>人事担当者</option><option>人事課長・マネージャー</option><option>人事部長・責任者</option><option>役員・取締役以上</option></select></div>
+        <div class="field"><label for="f-size">従業員規模</label>
+          <select id="f-size"><option value="">選択してください</option><option>〜50名</option><option>50〜300名</option><option>300〜1,000名</option><option>1,000名〜</option></select></div>
+      </div>
+      <div class="field" id="areas-field"><label>いま関心のある領域（複数可）</label><div class="chips" id="areas"></div></div>
+      <button class="primary" id="to-s2" onclick="goStep2()" disabled>サービス一覧を見る</button>
+      <p class="hint">ご入力いただいた情報は、ご紹介先のサービス事業者との商談設定にのみ使用します。商談後のアンケートにご協力いただいた方には、協力費として1商談あたり5,000円をお支払いします（受け取りの辞退も選べます）。</p>
+    </div>
+    <div id="s2" hidden>
+      <div class="panel" style="padding:18px 22px">
+        <h2 class="h-title" style="font-size:19px">気になるサービスに、興味度をつけてください</h2>
+        <p class="lead" style="font-size:14px">「ぜひ聞きたい」「少し聞いてみたい」を選んだサービスは、弊社が日程調整までお手伝いします。関心領域に近いものを上に表示しています。</p>
+      </div>
+      <div class="vlist" id="vlist"><div class="loading">サービス一覧を読み込んでいます…</div></div>
+      <div class="sticky"><div class="sum">
+        <div><b id="cnt">0</b> <small>件を選択中</small><div class="mini" id="cnt-sub">興味のあるサービスを選ぶと送信できます</div></div>
+        <button class="primary" id="submit" onclick="submitAnswers()" disabled>この内容で送る</button>
+      </div></div>
+      <div id="s2-err"></div>
+    </div>
+    <div id="s3" class="panel thanks" hidden>
+      <div class="mark">✓</div>
+      <h2 class="h-title">ありがとうございます。担当よりご連絡します。</h2>
+      <p class="lead" style="margin-inline:auto">選んでいただいたサービスの事業者と日程を調整し、公式LINEからご案内します。</p>
+      <div class="picked" id="picked"></div>
+      <a class="line" id="line-link" href="#" target="_blank" rel="noopener">公式LINEで案内を受け取る</a>
+      <p class="note">すでに友だち追加済みの方は、そのままお待ちください。</p>
+    </div>
+  </section>
+
+  <!-- ===== ベンダー登録 ===== -->
+  <section id="vendor" hidden>
+    <div class="panel" style="margin-top:22px" id="vr-form">
+      <h1 class="h-title">サービス掲載のお申し込み</h1>
+      <p class="lead">人事のチカラに登録している人事担当者へ、貴社サービスをご紹介します。人事が「聞いてみたい」と選んだ場合のみ商談を設定し、費用は人事がWeb商談に着座した時点で発生します。</p>
+      <div class="grid2">
+        <div class="field"><label for="vr-company">会社名</label><input id="vr-company"></div>
+        <div class="field"><label for="vr-name">サービス名</label><input id="vr-name" placeholder="人事に見せる正式名称"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label for="vr-cat">カテゴリ</label><select id="vr-cat"></select></div>
+        <div class="field"><label for="vr-price">商談単価の希望</label>
+          <select id="vr-price"><option>全職位 3万円/商談</option><option>課長職以上限定 4〜5万円/商談</option><option>前金プランを相談したい</option></select></div>
+      </div>
+      <div class="field"><label for="vr-desc">人事に見せる一行説明（60字以内）</label><input id="vr-desc" maxlength="60" placeholder="例：中途採用のスカウト代行。返信率12%、月10名の面談を保証"></div>
+      <div class="field"><label for="vr-for">向いている企業</label><input id="vr-for" placeholder="例：50〜300名・エンジニア採用中"></div>
+      <div class="field"><label>会いたい人事の条件（複数可）</label><div class="chips" id="vr-target"></div></div>
+      <div class="grid2">
+        <div class="field"><label for="vr-person">ご担当者名</label><input id="vr-person"></div>
+        <div class="field"><label for="vr-mail">メールアドレス</label><input id="vr-mail" type="email"></div>
+      </div>
+      <div class="field"><label for="vr-src">ご紹介元</label><select id="vr-src"><option>直接のお問い合わせ</option><option>DYM</option><option>その他の紹介</option></select></div>
+      <button class="primary" id="vr-submit" onclick="submitVendor()">掲載を申し込む</button>
+      <p class="hint">お申し込み後、弊社で内容を確認し、掲載開始と条件のご案内をメールでお送りします。掲載自体に費用はかかりません。商談後に人事へお支払いするリサーチ協力費（1商談5,000円）は商談単価に含まれます。</p>
+      <div id="vr-err"></div>
+    </div>
+    <div id="vr-done" class="panel thanks" hidden>
+      <div class="mark">✓</div><h2 class="h-title">お申し込みを受け付けました</h2>
+      <p class="lead" style="margin-inline:auto">2営業日以内に担当よりご連絡し、ターゲット条件のすり合わせ（30分程度）を行います。</p>
+    </div>
+  </section>
+
+  <!-- ===== 管理 ===== -->
+  <section id="admin" hidden>
+    <div class="panel login" id="login">
+      <h2 class="h-title" style="font-size:18px">管理画面</h2>
+      <div class="field"><label for="tok">合言葉</label><input id="tok" type="password" autocomplete="current-password"></div>
+      <button class="primary" onclick="login()">開く</button>
+      <div id="login-err"></div>
+    </div>
+    <div id="adm" hidden>
+      <div class="kpis" id="kpis"></div>
+      <div class="sec"><h2>つなぎ待ちリスト</h2><div class="tools">
+        <button class="ghost" onclick="loadAdmin()">更新</button>
+        <button class="ghost" onclick="copyTsv()">スプレッドシート用にコピー</button>
+      </div></div>
+      <p class="mini" style="margin:-4px 0 10px">人事1名×ベンダー1社が1行。「ぜひ聞きたい」を上に。状態を変えるとシートに保存されます。</p>
+      <div class="tablewrap"><table>
+        <thead><tr><th>興味度</th><th>人事の方</th><th>会社 / 規模</th><th>ベンダー</th><th>回答日</th><th>つなぎ状況</th></tr></thead>
+        <tbody id="leads"></tbody></table></div>
+
+      <div class="sec"><h2>掲載申し込み（承認待ち）</h2><span class="mini" id="pcount"></span></div>
+      <div class="vendor-admin" id="pending"></div>
+
+      <div class="sec"><h2>新着ベンダーを既存の人事に提案する</h2></div>
+      <p class="mini" style="margin:-4px 0 10px">ベンダーを選ぶと、関心領域が合い、まだそのベンダーを評価しておらず、未提案の人事が出ます。文面をコピーしてLINEから送ってください。</p>
+      <div class="panel" style="padding:16px 18px">
+        <div class="grid2">
+          <div class="field" style="margin-top:0"><label for="pr-vendor">提案するベンダー</label><select id="pr-vendor" onchange="renderPropose()"></select></div>
+          <div class="field" style="margin-top:0"><label for="pr-channel">配信チャネル</label><select id="pr-channel" onchange="renderPropose()"><option>公式LINE（一斉）</option><option>個人LINE（個別）</option></select></div>
+        </div>
+        <div id="pr-targets" style="margin-top:14px"></div>
+        <div class="field"><label for="pr-text">送信文（編集できます）</label><textarea id="pr-text" rows="8"></textarea></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          <button class="ghost" onclick="copyPropose()">文面をコピー</button>
+          <button class="ghost" onclick="markProposed()">提案済みにする</button>
+        </div>
+      </div>
+
+      <div class="sec"><h2>ベンダー一覧</h2><span class="mini" id="vcount"></span></div>
+      <div class="vendor-admin" id="vadmin"></div>
+      <div class="addform" style="margin-top:12px">
+        <b style="font-size:14px">ベンダーを追加</b>
+        <div class="row"><input id="a-name" placeholder="サービス名"><input id="a-company" placeholder="会社名"></div>
+        <div class="row"><select id="a-cat"></select><select id="a-src"><option>自社獲得</option><option>DYM</option></select></div>
+        <input id="a-desc" placeholder="人事に見せる一行説明">
+        <div class="row"><input id="a-for" placeholder="向いている企業"><input id="a-price" placeholder="単価（例：50,000）"></div>
+        <button class="primary" style="margin-top:4px" onclick="addVendor()">追加する</button>
+      </div>
+      <p class="note">データはスプレッドシートの「提案シート_」で始まるタブに保存されています。直接編集しても反映されます。</p>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="config.js"></script>
+<script>
+const AREAS=["人材紹介・エージェント","RPO・採用代行","採用媒体・スカウト","採用ブランディング・SNS","採用イベント","HR SaaS・労務","研修・組織開発","福利厚生・労務","採用課題全般"];
+const TARGETS=["〜50名","50〜300名","300〜1,000名","1,000名〜","人事担当者","人事責任者","役員以上"];
+const RATE_LABEL={3:"ぜひ聞きたい",2:"少し聞いてみたい",1:"今は不要"};
+const RATE_CLASS={3:"hot",2:"warm",1:"cold"};
+const STATUS=["未対応","日程調整中","着座済み","見送り"];
+const API=(window.CONFIG&&CONFIG.API_URL)||"";
+const LINE_URL=(window.CONFIG&&CONFIG.LINE_URL)||"#";
+const q=new URLSearchParams(location.search);
+const preV=q.get('v');
+let vendors=[];          // 掲載中
+let A={vendors:[],responses:[],pending:[],proposed:{}}; // 管理用
+let token=sessionStorage.getItem('jc_token')||'';
+
+function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function v(id){return document.getElementById(id).value.trim();}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),2200);}
+function showErr(id,m){document.getElementById(id).innerHTML=m?`<div class="err">${esc(m)}</div>`:'';}
+async function api(action,payload){
+  if(!API)throw new Error('config.js に API_URL が設定されていません');
+  const r=await fetch(API,{method:'POST',body:JSON.stringify({action,...payload})});
+  const j=await r.json(); if(!j.ok)throw new Error(j.error||'error'); return j;
+}
+async function apiGet(params){
+  if(!API)throw new Error('config.js に API_URL が設定されていません');
+  const r=await fetch(API+'?'+new URLSearchParams(params)); const j=await r.json(); if(!j.ok)throw new Error(j.error||'error'); return j;
+}
+
+/* ---- モード ---- */
+function setMode(m){
+  ['hr','vendor','admin'].forEach(x=>{document.getElementById(x).hidden=x!==m;document.getElementById('mode-'+x).setAttribute('aria-pressed',x===m);});
+  document.getElementById('app').classList.toggle('wide',m==='admin');
+  if(m==='vendor')initVendorForm();
+  if(m==='admin'&&token)loadAdmin();
+}
+window.addEventListener('hashchange',()=>{const h=location.hash.replace('#','');if(h==='admin'||h==='vendor'){document.getElementById('modebar').hidden=false;setMode(h);}else setMode('hr');});
+(function boot(){
+  const h=location.hash.replace('#','');
+  if(h==='admin'||h==='vendor'){document.getElementById('modebar').hidden=false;setMode(h);}
+  if(preV){document.getElementById('areas-field').hidden=true;document.getElementById('s1-title').textContent='ご案内したサービスについて';document.getElementById('s1-lead').textContent='お名前と会社名をご入力のうえ、次の画面で興味度を選んでください。30秒ほどで終わります。';document.getElementById('to-s2').textContent='サービスを見る';}
+  document.getElementById('line-link').href=LINE_URL;
+  loadVendors();
+})();
+async function loadVendors(){
+  try{const j=await apiGet({action:'vendors'});vendors=j.vendors;}
+  catch(e){document.getElementById('vlist').innerHTML=`<div class="err">サービス一覧を読み込めませんでした。${esc(e.message)}</div>`;}
+}
+
+/* ---- 人事 step1 ---- */
+const cur={areas:new Set(),ratings:{}};
+const areasEl=document.getElementById('areas');
+AREAS.forEach(a=>{const b=document.createElement('button');b.className='chip';b.type='button';b.textContent=a;b.setAttribute('aria-pressed','false');b.onclick=()=>{cur.areas.has(a)?cur.areas.delete(a):cur.areas.add(a);b.setAttribute('aria-pressed',cur.areas.has(a));validate();};areasEl.appendChild(b);});
+['f-company','f-name','f-role','f-size'].forEach(id=>document.getElementById(id).addEventListener('input',validate));
+function validate(){document.getElementById('to-s2').disabled=!['f-company','f-name','f-role','f-size'].every(id=>v(id));}
+function setSteps(n){document.querySelectorAll('#steps span').forEach((el,i)=>{el.className=i+1<n?'done':i+1===n?'on':'';});}
+
+/* ---- 人事 step2 ---- */
+function goStep2(){
+  setSteps(2);document.getElementById('s1').hidden=true;document.getElementById('s2').hidden=false;cur.ratings={};
+  const list=document.getElementById('vlist');
+  let vs=vendors.slice();
+  if(preV){vs=vs.filter(x=>x.id===preV);if(!vs.length){list.innerHTML='<div class="err">ご案内したサービスが見つかりませんでした。</div>';return;}}
+  else vs.sort((a,b)=>(cur.areas.has(b.cat)?1:0)-(cur.areas.has(a.cat)?1:0));
+  list.innerHTML=vs.length?'':'<div class="loading">現在ご紹介できるサービスがありません。</div>';
+  vs.forEach(x=>{const m=cur.areas.has(x.cat)||!!preV;const c=document.createElement('div');c.className='vcard'+(m?' match':'');
+    c.innerHTML=`<div class="vhead"><div class="vname">${esc(x.name)}</div><span class="vcat">${esc(x.cat)}</span></div><p class="vdesc">${esc(x.desc)}</p><div class="vfor">こんな企業向け：${esc(x.for)}</div>
+      <div class="rate" role="group" aria-label="${esc(x.name)}の興味度">${[3,2,1].map(r=>`<button type="button" data-v="${r}" aria-pressed="false" onclick="rate('${x.id}',${r},this)">${RATE_LABEL[r]}</button>`).join('')}</div>`;
+    list.appendChild(c);});
+  updateCount();window.scrollTo({top:0});
+}
+function rate(id,r,btn){const g=btn.parentElement;if(cur.ratings[id]===r){delete cur.ratings[id];g.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed','false'));}else{cur.ratings[id]=r;g.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b===btn));}updateCount();}
+function updateCount(){const n=Object.values(cur.ratings).filter(r=>r>=2).length;const any=Object.keys(cur.ratings).length>0;document.getElementById('cnt').textContent=n;document.getElementById('submit').disabled=!any;document.getElementById('cnt-sub').textContent=n?'「ぜひ」「少し」を選んだサービスをおつなぎします':any?'「今は不要」のみでも送信できます':'興味度を選ぶと送信できます';}
+async function submitAnswers(){
+  const btn=document.getElementById('submit');btn.disabled=true;btn.textContent='送信中…';showErr('s2-err','');
+  try{
+    const j=await api('submit',{company:v('f-company'),name:v('f-name'),role:v('f-role'),size:v('f-size'),areas:[...cur.areas],ratings:cur.ratings});
+    setSteps(3);document.getElementById('s2').hidden=true;document.getElementById('s3').hidden=false;
+    const p=document.getElementById('picked');p.innerHTML=(j.picked||[]).map(n=>`<span>${esc(n)}</span>`).join('');
+    if(!(j.picked||[]).length)document.querySelector('#s3 .lead').textContent='今回はご興味に合うサービスがなかったとのこと、承知しました。新しいサービスが加わった際に公式LINEでご案内します。';
+    window.scrollTo({top:0});
+  }catch(e){showErr('s2-err','送信できませんでした。通信状況をご確認のうえ、もう一度お試しください。（'+e.message+'）');btn.disabled=false;btn.textContent='この内容で送る';}
+}
+
+/* ---- ベンダー登録 ---- */
+const vrTarget=new Set();
+function initVendorForm(){
+  const c=document.getElementById('vr-cat');if(!c.options.length)AREAS.forEach(a=>{const o=document.createElement('option');o.textContent=a;c.appendChild(o);});
+  const t=document.getElementById('vr-target');if(!t.children.length)TARGETS.forEach(a=>{const b=document.createElement('button');b.className='chip';b.type='button';b.textContent=a;b.setAttribute('aria-pressed','false');b.onclick=()=>{vrTarget.has(a)?vrTarget.delete(a):vrTarget.add(a);b.setAttribute('aria-pressed',vrTarget.has(a));};t.appendChild(b);});
+}
+async function submitVendor(){
+  const need=['vr-company','vr-name','vr-desc','vr-person','vr-mail'];
+  if(!need.every(id=>v(id))){showErr('vr-err','会社名・サービス名・一行説明・担当者・メールは必須です');return;}
+  const btn=document.getElementById('vr-submit');btn.disabled=true;btn.textContent='送信中…';showErr('vr-err','');
+  try{
+    await api('vendor_apply',{company:v('vr-company'),name:v('vr-name'),cat:v('vr-cat'),desc:v('vr-desc'),for:v('vr-for'),target:[...vrTarget],price:v('vr-price'),person:v('vr-person'),mail:v('vr-mail'),src:v('vr-src')});
+    document.getElementById('vr-form').hidden=true;document.getElementById('vr-done').hidden=false;window.scrollTo({top:0});
+  }catch(e){showErr('vr-err','送信できませんでした。'+e.message);btn.disabled=false;btn.textContent='掲載を申し込む';}
+}
+
+/* ---- 管理 ---- */
+async function login(){
+  const t=v('tok');showErr('login-err','');
+  try{await api('ping',{token:t});token=t;sessionStorage.setItem('jc_token',t);loadAdmin();}
+  catch(e){showErr('login-err',e.message);}
+}
+async function loadAdmin(){
+  try{const j=await apiGet({action:'admin',token});A=j;document.getElementById('login').hidden=true;document.getElementById('adm').hidden=false;renderAdmin();}
+  catch(e){token='';sessionStorage.removeItem('jc_token');document.getElementById('login').hidden=false;document.getElementById('adm').hidden=true;showErr('login-err',e.message);}
+}
+function leads(){
+  return A.responses.filter(x=>x.rate>=2).map(x=>({...x,statusIdx:Math.max(0,STATUS.indexOf(x.status||'未対応'))}))
+    .sort((a,b)=>a.statusIdx-b.statusIdx||b.rate-a.rate||(a.ts<b.ts?1:-1));
+}
+function renderAdmin(){
+  const L=leads();const seated=L.filter(x=>x.status==='着座済み').length;
+  const hrCount=new Set(A.responses.map(x=>x.id)).size;
+  document.getElementById('kpis').innerHTML=[['回答した人事',hrCount,'名'],['つなぎ候補',L.length,'件（ぜひ＋少し）'],['ぜひ聞きたい',L.filter(x=>x.rate===3).length,'件'],['着座済み',seated,'件']]
+    .map(([t,n,s])=>`<div class="kpi"><small>${t}</small><b>${n}</b><div class="sub">${s}</div></div>`).join('');
+  const vmap={};A.vendors.forEach(x=>vmap[x.id]=x);
+  document.getElementById('leads').innerHTML=L.length?L.map(x=>`<tr>
+    <td><span class="tag ${RATE_CLASS[x.rate]}">${RATE_LABEL[x.rate]}</span></td>
+    <td><b>${esc(x.name)}</b><div class="mini">${esc(x.role)}</div></td>
+    <td>${esc(x.company)}<div class="mini">${esc(x.size)}</div></td>
+    <td>${esc(x.vendorName)}<div class="mini">${esc(vmap[x.vendorId]?.cat||'')} ・ ${esc(vmap[x.vendorId]?.src||'')}</div></td>
+    <td class="mini">${esc(x.ts.slice(0,10))}</td>
+    <td><select class="st s${x.statusIdx}" onchange="setStatus('${x.id}','${x.vendorId}',this.value,this)">${STATUS.map(s=>`<option ${s===(x.status||'未対応')?'selected':''}>${s}</option>`).join('')}</select></td>
+  </tr>`).join(''):`<tr><td colspan="6" class="mini" style="padding:24px;text-align:center">まだ回答がありません。</td></tr>`;
+  // pending
+  document.getElementById('pending').innerHTML=A.pending.length?A.pending.map(p=>`<div class="vrow"><div class="top"><b>${esc(p.name)}</b><span class="mini">${esc(p.date)}</span></div>
+    <div class="mini">${esc(p.company)} ・ ${esc(p.cat)} ・ ${esc(p.src)} ・ ${esc(p.price)}</div><div>${esc(p.desc)}</div>
+    <div class="mini">向け：${esc(p.for)}　条件：${esc(p.target.join('、')||'未指定')}</div><div class="mini">${esc(p.person)} ／ ${esc(p.mail)}</div>
+    <div style="display:flex;gap:8px;margin-top:6px"><button class="ghost" style="border-color:var(--ok);color:var(--ok)" onclick="act('approve','${p.id}','掲載を開始しました')">承認して掲載</button><button class="ghost" onclick="if(confirm('見送りますか？'))act('reject','${p.id}','見送りにしました')">見送る</button></div></div>`).join('')
+    :'<div class="mini" style="padding:6px 2px">承認待ちの申し込みはありません。</div>';
+  document.getElementById('pcount').textContent=A.pending.length?`${A.pending.length}件`:'';
+  // vendors
+  document.getElementById('vadmin').innerHTML=A.vendors.map(x=>`<div class="vrow"><div class="top"><b>${esc(x.name)}</b><button class="pub ${x.published?'':'off'}" style="border:0;cursor:pointer" onclick="act('set_published','${x.id}','${x.published?'非掲載にしました':'掲載しました'}',{published:${!x.published}})">${x.published?'掲載中':'非掲載'}</button></div>
+    <div class="mini">${esc(x.company)} ・ ${esc(x.cat)} ・ ${esc(x.src)}${x.price?' ・ 単価 '+esc(x.price):''}${x.role?' ・ '+esc(x.role):''}</div><div>${esc(x.desc)}</div><div class="mini">向け：${esc(x.for)}</div></div>`).join('');
+  document.getElementById('vcount').textContent=`${A.vendors.length}社（掲載中 ${A.vendors.filter(x=>x.published).length} ・ DYM ${A.vendors.filter(x=>x.src==='DYM').length}）`;
+  const ac=document.getElementById('a-cat');if(!ac.options.length)AREAS.forEach(a=>{const o=document.createElement('option');o.textContent=a;ac.appendChild(o);});
+  renderPropose();
+}
+async function setStatus(id,vendorId,status,sel){
+  try{await api('status',{token,id,vendorId,status});const r=A.responses.find(x=>x.id===id&&x.vendorId===vendorId);if(r)r.status=status;sel.className='st s'+STATUS.indexOf(status);toast('保存しました');}
+  catch(e){toast('保存できませんでした：'+e.message);}
+}
+async function act(action,id,msg,extra){try{await api(action,{token,id,...(extra||{})});toast(msg);loadAdmin();}catch(e){toast(e.message);}}
+async function addVendor(){
+  if(!v('a-name')||!v('a-desc')){toast('サービス名と一行説明は必須です');return;}
+  try{await api('add_vendor',{token,vendor:{name:v('a-name'),company:v('a-company'),cat:v('a-cat'),desc:v('a-desc'),for:v('a-for'),price:v('a-price'),src:v('a-src')}});['a-name','a-company','a-desc','a-for','a-price'].forEach(id=>document.getElementById(id).value='');toast('追加しました');loadAdmin();}
+  catch(e){toast(e.message);}
+}
+/* 提案 */
+function hrKey(r){return r.company+'|'+r.name;}
+function proposeTargets(vid){
+  const vd=A.vendors.find(x=>x.id===vid);if(!vd)return[];
+  const done=new Set(A.proposed[vid]||[]);const rated=new Set(A.responses.filter(r=>r.vendorId===vid).map(hrKey));
+  const seen=new Set();const out=[];
+  A.responses.forEach(r=>{const k=hrKey(r);if(seen.has(k))return;seen.add(k);if(rated.has(k)||done.has(k))return;if(r.areas.includes(vd.cat))out.push(r);});
+  return out;
+}
+function renderPropose(){
+  const sel=document.getElementById('pr-vendor');const keep=sel.value;
+  sel.innerHTML=A.vendors.filter(x=>x.published).map(x=>`<option value="${x.id}">${esc(x.name)}（${esc(x.cat)}）</option>`).join('');
+  if(keep&&[...sel.options].some(o=>o.value===keep))sel.value=keep;
+  const vid=sel.value;const vd=A.vendors.find(x=>x.id===vid);const T=proposeTargets(vid);
+  document.getElementById('pr-targets').innerHTML=vd?`<div class="mini" style="margin-bottom:6px">対象：関心領域「${esc(vd.cat)}」で未評価・未提案の人事 <b>${T.length}</b>名</div><div class="chips">${T.map(r=>`<span class="chip" style="cursor:default">${esc(r.name)}（${esc(r.company)}）</span>`).join('')||'<span class="mini">該当する人事はいません</span>'}</div>`:'';
+  const ch=document.getElementById('pr-channel').value;const who=ch.startsWith('個人')&&T[0]?`${T[0].name}様`:'人事のチカラ会員の皆さま';
+  const link=location.origin+location.pathname+'?v='+vid;
+  document.getElementById('pr-text').value=vd?`${who}
+
+人事のチカラ運営（BizLabo）です。「${vd.cat}」にご関心をお持ちの方へ、新しくご紹介できるサービスが加わりました。
+
+■ ${vd.name}
+${vd.desc}
+こんな企業向け：${vd.for}
+
+少しでも気になる場合は、下記から「聞いてみたい」を選んでください（30秒）。日程調整は弊社が行います。商談後のアンケートにご協力いただくと、協力費5,000円をお支払いします。
+▶ ${link}
+
+ご不要の場合はそのままで結構です。`:'';
+}
+function copyPropose(){navigator.clipboard?.writeText(document.getElementById('pr-text').value).then(()=>toast('文面をコピーしました'),()=>toast('コピーできませんでした'));}
+async function markProposed(){const vid=document.getElementById('pr-vendor').value;const T=proposeTargets(vid);if(!T.length){toast('対象がいません');return;}
+  try{await api('mark_proposed',{token,vendorId:vid,keys:T.map(hrKey)});toast(`${T.length}名を提案済みにしました`);loadAdmin();}catch(e){toast(e.message);}}
+function copyTsv(){
+  const rows=[['興味度','氏名','役職','会社','規模','関心領域','ベンダー','回答日','つなぎ状況']];
+  leads().forEach(x=>rows.push([RATE_LABEL[x.rate],x.name,x.role,x.company,x.size,x.areas.join('、'),x.vendorName,x.ts,x.status||'未対応']));
+  navigator.clipboard?.writeText(rows.map(r=>r.join('\t')).join('\n')).then(()=>toast('コピーしました'),()=>toast('コピーできませんでした'));
+}
+validate();
+</script>
+</body>
+</html>
