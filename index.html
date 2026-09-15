@@ -754,8 +754,9 @@ function hrRecords(){
   return list.map(h=>{const rs=byKey[h.key]||[];const seated=rs.filter(r=>r.status==='着座済み'),prog=rs.filter(r=>r.status==='日程調整中');
     const vn=r=>(vmap[r.vendorId]||{}).company||r.vendorName;const last=[...seated,...prog].map(r=>r.date||'').filter(Boolean).sort().pop()||'';
     const tm=thisMonth();const monthLinked=rs.filter(r=>(r.status==='着座済み'||r.status==='日程調整中')&&((r.date||'').startsWith(tm)||(!r.date&&(r.updated||'').startsWith(tm))));
-    const acts=rs.flatMap(r=>[r.ts||'',r.date||'']).concat([h.updated||'',h.date||'']).map(x=>String(x).slice(0,10)).filter(x=>/^\d{4}\/\d{2}\/\d{2}$/.test(x));
-    const lastAct=acts.sort().pop()||'';const days=lastAct?Math.floor((TODAY-new Date(lastAct.replace(/\//g,'-')))/86400000):null;
+    // 活動＝人事が実際に動いた日：提案シートの回答日（旧シート取り込み分は除く）と商談日
+    const acts=rs.flatMap(r=>[(r.memo||'').startsWith('旧シート')?'':(r.ts||''),r.date||'']).map(x=>String(x).slice(0,10)).filter(x=>/^\d{4}\/\d{2}\/\d{2}$/.test(x));
+    const lastAct=acts.sort().pop()||'';const days=lastAct?Math.max(0,Math.floor((TODAY-new Date(lastAct.replace(/\//g,'-')))/86400000)):null;
     const act=days==null?'長期未接触':days<=60?'活動中':days<=180?'休眠':'長期未接触';
     return {...h,rs,seated,prog,monthLinked,vnames:rs.map(vn).join(' '),last,lastAct,days,act,fee:seated.reduce((a,r)=>a+(Number(r.fee)||0),0)};});
 }
