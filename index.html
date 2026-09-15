@@ -187,6 +187,8 @@ td input.cell.wide{min-width:150px}
 .grow .vn b{font-weight:600}
 @media (max-width:640px){.grow{grid-template-columns:1fr auto}.grow .tag{grid-column:1/-1}}
 .empty{padding:28px;text-align:center;color:var(--faint);font-size:13.5px;background:#fff;border:1px dashed var(--line-2);border-radius:var(--radius)}
+.chips.tight{gap:4px;max-width:340px}
+.tag small{font-size:10px;opacity:.75;margin-left:5px;font-variant-numeric:tabular-nums}
 .loading{color:var(--faint);font-size:13px;padding:24px;text-align:center}
 .err{background:#FDECEA;color:#A32D1E;border:1px solid #F1B7AE;border-radius:8px;padding:10px 14px;font-size:13.5px;margin-top:12px}
 .login{max-width:420px;margin:40px auto}
@@ -333,15 +335,16 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
       </div><!-- /tab-leads -->
 
       <div class="tabp" id="tab-hr" hidden>
-        <div class="sec"><h2>登録されている人事</h2><div class="tools">
-          <input id="hr-q" placeholder="会社名・氏名で検索" style="width:220px;padding:8px 10px" oninput="renderHr()">
+        <div class="sec"><h2>登録されている人事 <span class="mini" id="hr-count"></span></h2><div class="tools">
+          <input id="hr-q" placeholder="会社名・氏名・企業名で検索" style="width:220px;padding:8px 10px" oninput="renderHr()">
+          <select id="hr-f" class="st" style="padding:8px 10px" onchange="renderHr()"><option value="">すべての人事</option><option value="seated">着座済みがある</option><option value="progress">日程調整中がある</option><option value="none">まだつないでいない</option></select>
           <button class="ghost" onclick="copyHrTsv()">スプレッドシート用にコピー</button>
           <button class="ghost" onclick="act('backfill_hr','',
             '既存の回答から人事一覧を作りました')">回答から一覧を作り直す</button>
         </div></div>
         <p class="mini" style="margin:-4px 0 10px">提案シートに回答した人事は自動で追加されます。「つなぎ済み」は日程調整中・着座済みの企業です。受取方法・連絡先・メモは入力するとその場で保存されます。</p>
         <div class="tablewrap"><table>
-          <thead><tr><th>会社 / 規模</th><th>氏名 / 役職</th><th>関心領域</th><th>つなぎ済み企業</th><th>協力費累計</th><th>受取方法</th><th>連絡先</th><th>メモ</th></tr></thead>
+          <thead><tr><th>会社 / 規模</th><th>氏名 / 役職</th><th>関心領域</th><th>着座済み（つなぎ済み）</th><th>日程調整中</th><th>協力費累計</th><th>受取方法</th><th>連絡先</th><th>メモ</th></tr></thead>
           <tbody id="hr-rows"></tbody></table></div>
         <div class="addform" style="margin-top:12px">
           <b style="font-size:14px">人事を手動で追加</b>
@@ -615,27 +618,34 @@ function renderLeads(L,vmap){
     </details>`;}).join('');
 }
 function renderHr(){
-  const q=(document.getElementById('hr-q').value||'').trim();
+  const q=(document.getElementById('hr-q').value||'').trim();const f=document.getElementById('hr-f').value;
   const byKey={};A.responses.forEach(r=>{const k=r.company.trim()+'|'+r.name.trim();(byKey[k]=byKey[k]||[]).push(r);});
+  const vmap={};A.vendors.forEach(x=>vmap[x.id]=x);
   const list=(A.hr||[]).slice();
-  // 回答はあるが人事タブに未登録の人も表示
   Object.keys(byKey).forEach(k=>{if(!list.some(h=>h.key===k)){const r=byKey[k][0];list.push({key:k,company:r.company,name:r.name,role:r.role,size:r.size,areas:r.areas,payment:'',contact:'',memo:'',date:r.ts,unsaved:true});}});
-  const rows=list.filter(h=>!q||(h.company+h.name).includes(q)).sort((a,b)=>(a.date<b.date?1:-1));
+  const enrich=h=>{const rs=byKey[h.key]||[];const seated=rs.filter(r=>r.status==='着座済み'),prog=rs.filter(r=>r.status==='日程調整中');
+    const vn=r=>(vmap[r.vendorId]||{}).company||r.vendorName;const last=seated.map(r=>r.date||r.ts).sort().pop()||h.date||'';
+    return {...h,rs,seated,prog,vnames:rs.map(vn).join(' '),last,fee:seated.reduce((a,r)=>a+(Number(r.fee)||0),0)};};
+  let rows=list.map(enrich).filter(h=>!q||(h.company+h.name+h.vnames).includes(q));
+  if(f==='seated')rows=rows.filter(h=>h.seated.length);if(f==='progress')rows=rows.filter(h=>h.prog.length);if(f==='none')rows=rows.filter(h=>!h.seated.length&&!h.prog.length);
+  rows.sort((a,b)=>(a.last<b.last?1:-1));
+  document.getElementById('hr-count').textContent=`${rows.length}名`;
+  const vn=r=>esc((vmap[r.vendorId]||{}).company||r.vendorName);
   document.getElementById('hr-rows').innerHTML=rows.length?rows.map(h=>{
-    const rs=byKey[h.key]||[];const linked=rs.filter(r=>r.status==='日程調整中'||r.status==='着座済み');
-    const fee=rs.filter(r=>r.status==='着座済み').reduce((a,r)=>a+(Number(r.fee)||0),0);
-    const chips=linked.map(r=>`<span class="tag ${r.status==='着座済み'?'hot':'warm'}" title="${esc(r.status)}">${esc((A.vendors.find(v=>v.id===r.vendorId)||{}).company||r.vendorName)}</span>`).join(' ');
     const dis=h.unsaved?'disabled title="「回答から一覧を作り直す」を押すと編集できます"':'';
+    const seatedHtml=h.seated.length?`<div class="chips tight">${h.seated.sort((a,b)=>((b.date||'')>(a.date||'')?1:-1)).map(r=>`<span class="tag hot" title="${esc(r.memo||'')}">${vn(r)}${r.date?`<small>${esc(r.date.slice(2,10))}</small>`:''}</span>`).join('')}</div>`:'<span class="mini">—</span>';
+    const progHtml=h.prog.length?`<div class="chips tight">${h.prog.map(r=>`<span class="tag warm">${vn(r)}</span>`).join('')}</div>`:'<span class="mini">—</span>';
     return `<tr>
       <td><b>${esc(h.company)}</b><div class="mini">${esc(h.size||'')}</div></td>
       <td>${esc(h.name)}<div class="mini">${esc(h.role||'')}</div></td>
       <td class="mini">${esc((h.areas||[]).join('、'))}</td>
-      <td>${chips||'<span class="mini">—</span>'}</td>
-      <td class="num">${fee?yen(fee):'—'}</td>
+      <td>${seatedHtml}</td>
+      <td>${progHtml}</td>
+      <td class="num">${h.fee?yen(h.fee):'—'}<div class="mini">${h.seated.length?h.seated.length+'件':''}</div></td>
       <td><select class="cell" ${dis} onchange="saveHr('${esc(h.key)}','payment',this.value)">${PAYMENT.map(p=>`<option ${p===(h.payment||'')?'selected':''}>${p||'未設定'}</option>`).join('')}</select></td>
       <td><input class="cell wide" ${dis} value="${esc(h.contact||'')}" placeholder="LINE名・メール" onblur="saveHr('${esc(h.key)}','contact',this.value)"></td>
       <td><input class="cell wide" ${dis} value="${esc(h.memo||'')}" placeholder="メモ" onblur="saveHr('${esc(h.key)}','memo',this.value)"></td>
-    </tr>`;}).join(''):`<tr><td colspan="8" class="mini" style="padding:24px;text-align:center">まだ人事が登録されていません。</td></tr>`;
+    </tr>`;}).join(''):`<tr><td colspan="9" class="mini" style="padding:24px;text-align:center">該当する人事がいません。</td></tr>`;
 }
 async function saveHr(key,field,value){const h=(A.hr||[]).find(x=>x.key===key);if(h&&h[field]===value)return;if(h)h[field]=value;
   try{await api('update_hr',{token,key,fields:{[field]:value}});store.set('jc_admin',{tok:token,d:A,t:Date.now()});toast('保存しました');}catch(e){toast('保存できませんでした：'+e.message);}}
@@ -674,7 +684,7 @@ async function saveResp(id,vendorId,field,value){const r=A.responses.find(x=>x.i
   try{await api('update_response',{token,id,vendorId,fields:{[field]:val}});store.set('jc_admin',{tok:token,d:A,t:Date.now()});toast('保存しました');}catch(e){toast('保存できませんでした：'+e.message);}}
 function copyHrTsv(){const rows=[['会社','規模','氏名','役職','関心領域','つなぎ済み企業','協力費累計','受取方法','連絡先','メモ']];
   const byKey={};A.responses.forEach(r=>{const k=r.company.trim()+'|'+r.name.trim();(byKey[k]=byKey[k]||[]).push(r);});
-  (A.hr||[]).forEach(h=>{const rs=byKey[h.key]||[];rows.push([h.company,h.size,h.name,h.role,(h.areas||[]).join('、'),rs.filter(r=>r.status==='日程調整中'||r.status==='着座済み').map(r=>r.vendorName).join('、'),rs.filter(r=>r.status==='着座済み').reduce((a,r)=>a+(Number(r.fee)||0),0),h.payment,h.contact,h.memo]);});
+  (A.hr||[]).forEach(h=>{const rs=byKey[h.key]||[];rows.push([h.company,h.size,h.name,h.role,(h.areas||[]).join('、'),rs.filter(r=>r.status==='着座済み').map(r=>r.vendorName+(r.date?'('+r.date+')':'')).join('、')+(rs.some(r=>r.status==='日程調整中')?' ／調整中：'+rs.filter(r=>r.status==='日程調整中').map(r=>r.vendorName).join('、'):''),rs.filter(r=>r.status==='着座済み').reduce((a,r)=>a+(Number(r.fee)||0),0),h.payment,h.contact,h.memo]);});
   navigator.clipboard?.writeText(rows.map(r=>r.join('\t')).join('\n')).then(()=>toast('コピーしました'),()=>toast('コピーできませんでした'));}
 function copySalesTsv(){const rows=[['商談日','会社','氏名','ベンダー','売上','協力費','粗利','ベンダー請求','人事支払','アンケート']];
   seated().forEach(r=>rows.push([r.date,r.company,r.name,r.vendorName,r.sales,r.fee,(Number(r.sales)||0)-(Number(r.fee)||0),r.invoice||'未請求',r.payout||'未払い',r.survey||'未提出']));
