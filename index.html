@@ -246,6 +246,9 @@ td input.cell.time{width:78px}
 .today td{background:var(--gold-soft)}
 .hint.notes{margin:12px 0 0;padding-left:1.2em;line-height:1.7}
 .hint.notes li{margin:2px 0}
+.act{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;margin-right:4px}
+.act::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.act-on{background:var(--ok-soft);color:var(--ok)}.act-idle{background:var(--gold-soft);color:var(--gold-2)}.act-off{background:var(--cold-soft);color:var(--muted)}
 .loading{color:var(--faint);font-size:13px;padding:24px;text-align:center}
 .err{background:#FDECEA;color:#A32D1E;border:1px solid #F1B7AE;border-radius:8px;padding:10px 14px;font-size:13.5px;margin-top:12px}
 .login{max-width:420px;margin:40px auto}
@@ -427,15 +430,16 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
         </div></div>
         <div class="filterbar" id="hr-filters">
           <div class="seg" id="hr-tagseg"></div>
+          <select id="hr-act" class="st" onchange="renderHr()"><option value="">活動状況：すべて</option><option>活動中</option><option>休眠</option><option>長期未接触</option></select>
           <select id="hr-size" class="st" onchange="renderHr()"><option value="">規模：すべて</option><option>〜50名</option><option>50〜300名</option><option>300〜1,000名</option><option>1,000名〜</option></select>
           <select id="hr-mid" class="st" onchange="renderHr()"><option value="">中途採用数：すべて</option><option value="0">0名</option><option value="1-10">1〜10名</option><option value="11-30">11〜30名</option><option value="31-50">31〜50名</option><option value="51-100">51〜100名</option><option value="101">101名以上</option></select>
           <select id="hr-new" class="st" onchange="renderHr()"><option value="">新卒採用数：すべて</option><option value="0">0名</option><option value="1-10">1〜10名</option><option value="11-30">11〜30名</option><option value="31-50">31〜50名</option><option value="51-100">51〜100名</option><option value="101">101名以上</option></select>
           <select id="hr-area" class="st" onchange="renderHr()"><option value="">関心領域：すべて</option></select>
-          <button class="ghost" onclick="['hr-size','hr-mid','hr-new','hr-area','hr-f'].forEach(i=>document.getElementById(i).value='');document.getElementById('hr-q').value='';hrTag='';renderHr()">条件をクリア</button>
+          <button class="ghost" onclick="['hr-size','hr-mid','hr-new','hr-area','hr-f','hr-act'].forEach(i=>document.getElementById(i).value='');document.getElementById('hr-q').value='';hrTag='';renderHr()">条件をクリア</button>
         </div>
         <p class="mini" style="margin:-4px 0 10px">人事の行を押すと、回答内容の詳細とつないだ企業の一覧が開きます。タグ・受取方法・連絡先・メモはそこで編集できます。</p>
         <div class="tablewrap"><table style="min-width:1040px">
-          <thead><tr><th style="width:90px">タグ</th><th>会社 / 規模</th><th>氏名 / 役職</th><th>採用数（新卒 / 中途）</th><th>関心領域</th><th>着座済み（つなぎ済み）</th><th>日程調整中</th><th>協力費累計</th></tr></thead>
+          <thead><tr><th style="width:120px">活動 / タグ</th><th>会社 / 規模</th><th>氏名 / 役職</th><th>採用数（新卒 / 中途）</th><th>関心領域</th><th>着座済み（つなぎ済み）</th><th>日程調整中</th><th>協力費累計</th></tr></thead>
           <tbody id="hr-rows"></tbody></table></div>
         <div class="addform" style="margin-top:12px">
           <b style="font-size:14px">人事を手動で追加</b>
@@ -750,7 +754,10 @@ function hrRecords(){
   return list.map(h=>{const rs=byKey[h.key]||[];const seated=rs.filter(r=>r.status==='着座済み'),prog=rs.filter(r=>r.status==='日程調整中');
     const vn=r=>(vmap[r.vendorId]||{}).company||r.vendorName;const last=[...seated,...prog].map(r=>r.date||'').filter(Boolean).sort().pop()||'';
     const tm=thisMonth();const monthLinked=rs.filter(r=>(r.status==='着座済み'||r.status==='日程調整中')&&((r.date||'').startsWith(tm)||(!r.date&&(r.updated||'').startsWith(tm))));
-    return {...h,rs,seated,prog,monthLinked,vnames:rs.map(vn).join(' '),last,fee:seated.reduce((a,r)=>a+(Number(r.fee)||0),0)};});
+    const acts=rs.flatMap(r=>[r.ts||'',r.date||'']).concat([h.updated||'',h.date||'']).map(x=>String(x).slice(0,10)).filter(x=>/^\d{4}\/\d{2}\/\d{2}$/.test(x));
+    const lastAct=acts.sort().pop()||'';const days=lastAct?Math.floor((TODAY-new Date(lastAct.replace(/\//g,'-')))/86400000):null;
+    const act=days==null?'長期未接触':days<=60?'活動中':days<=180?'休眠':'長期未接触';
+    return {...h,rs,seated,prog,monthLinked,vnames:rs.map(vn).join(' '),last,lastAct,days,act,fee:seated.reduce((a,r)=>a+(Number(r.fee)||0),0)};});
 }
 let meetView='list',meetStage='all';
 function dtKey(r){return (r.date||'9999/99/99')+' '+(r.time||'99:99');}
@@ -794,7 +801,7 @@ function copyMeetTsv(){const vmap={};A.vendors.forEach(x=>vmap[x.id]=x);const ro
   navigator.clipboard?.writeText(rows.map(r=>r.join('\t')).join('\n')).then(()=>toast('コピーしました'),()=>toast('コピーできませんでした'));}
 function renderHr(){
   const q=(document.getElementById('hr-q').value||'').trim();const f=document.getElementById('hr-f').value;
-  const fs=document.getElementById('hr-size').value,fm=document.getElementById('hr-mid').value,fn=document.getElementById('hr-new').value,fa=document.getElementById('hr-area').value;
+  const fact=document.getElementById('hr-act').value;const fs=document.getElementById('hr-size').value,fm=document.getElementById('hr-mid').value,fn=document.getElementById('hr-new').value,fa=document.getElementById('hr-area').value;
   const areaSel=document.getElementById('hr-area');if(areaSel.options.length===1)AREAS.forEach(a=>{const o=document.createElement('option');o.textContent=a;areaSel.appendChild(o);});
   const vmap={};A.vendors.forEach(x=>vmap[x.id]=x);
   const all=hrRecords();
@@ -802,7 +809,7 @@ function renderHr(){
   document.getElementById('hr-tagseg').innerHTML=[['','すべて',all.length],...HR_TAGS.map(t=>[t,t,tagCounts[t]||0])].map(([v,l,n])=>`<button type="button" aria-pressed="${hrTag===v}" onclick="hrTag='${v}';renderHr()">${l}<b>${n}</b></button>`).join('');
   let rows=all.filter(h=>!q||(h.company+h.name+h.vnames).includes(q));
   if(hrTag)rows=rows.filter(h=>(h.tags||[]).includes(hrTag));
-  if(fs)rows=rows.filter(h=>h.size===fs);if(fm)rows=rows.filter(h=>numBand(h.midcareer)===fm);if(fn)rows=rows.filter(h=>numBand(h.newgrad)===fn);if(fa)rows=rows.filter(h=>(h.areas||[]).includes(fa));
+  if(fact)rows=rows.filter(h=>h.act===fact);if(fs)rows=rows.filter(h=>h.size===fs);if(fm)rows=rows.filter(h=>numBand(h.midcareer)===fm);if(fn)rows=rows.filter(h=>numBand(h.newgrad)===fn);if(fa)rows=rows.filter(h=>(h.areas||[]).includes(fa));
   if(f==='seated')rows=rows.filter(h=>h.seated.length);if(f==='progress')rows=rows.filter(h=>h.prog.length);if(f==='none')rows=rows.filter(h=>!h.seated.length&&!h.prog.length);if(f==='month')rows=rows.filter(h=>h.monthLinked.length);if(f==='ref')rows=rows.filter(h=>h.referrer);
   rows.sort((a,b)=>{if(!!a.last!==!!b.last)return a.last?-1:1;if(a.last!==b.last)return a.last<b.last?1:-1;return (a.company||'').localeCompare(b.company||'','ja');});
   document.getElementById('hr-count').textContent=`${rows.length}名`;
@@ -810,7 +817,8 @@ function renderHr(){
   document.getElementById('hr-rows').innerHTML=rows.length?rows.map(h=>{
     const seatedHtml=h.seated.length?`<div class="chips tight">${h.seated.slice().sort((a,b)=>((b.date||'')>(a.date||'')?1:-1)).map(r=>vchip(r,vmap,'seated')).join('')}</div>`:'<span class="mini">—</span>';
     const progHtml=h.prog.length?`<div class="chips tight">${h.prog.map(r=>vchip(r,vmap,'prog')).join('')}</div>`:'<span class="mini">—</span>';
-    const tags=(h.tags||[]).map(t=>`<span class="tag tg-${HR_TAGS.indexOf(t)}">${esc(t)}</span>`).join(' ')||'<span class="mini">—</span>';
+    const actBadge=`<span class="act act-${h.act==='活動中'?'on':h.act==='休眠'?'idle':'off'}" title="${h.lastAct?'最終活動 '+esc(h.lastAct)+'（'+h.days+'日前）':'活動記録なし'}">${h.act}</span>`;
+    const tags=actBadge+((h.tags||[]).map(t=>`<span class="tag tg-${HR_TAGS.indexOf(t)}">${esc(t)}</span>`).join(' ')||'');
     return `<tr class="hrrow" onclick="openHr('${esc(h.key)}')">
       <td>${tags}</td>
       <td><b>${esc(h.company)}</b><div class="mini">${esc(h.size||'')}${h.headcount?'（'+esc(h.headcount)+'）':''}</div></td>
@@ -834,7 +842,7 @@ function openHr(key){
       <div class="chips" id="hr-m-tags">${HR_TAGS.map((t,i)=>`<button type="button" class="chip tg-${i}" aria-pressed="${(h.tags||[]).includes(t)}" ${dis} onclick="toggleTag('${esc(key)}','${t}',this)">${t}</button>`).join('')}</div></div>
     <div class="kvs">
       ${row('従業員規模',h.size+(h.headcount?'（'+h.headcount+'）':''))}${row('年間採用 新卒',h.newgrad)}${row('年間採用 中途',h.midcareer)}${row('苦戦している職種',h.hardjob)}
-      ${row('関心領域',(h.areas||[]).join('、'))}${row('採用手法',h.methods)}${row('検討時期',h.timing)}${row('登録日',h.date)}
+      ${row('関心領域',(h.areas||[]).join('、'))}${row('採用手法',h.methods)}${row('検討時期',h.timing)}${row('登録日',h.date)}${row('活動状況',h.act+(h.lastAct?'（最終 '+h.lastAct+'）':''))}
     </div>
     ${h.worry?`<div class="kv wide"><span>課題・悩み</span><b>${esc(h.worry)}</b></div>`:''}
     <div class="grid2" style="margin-top:8px">
