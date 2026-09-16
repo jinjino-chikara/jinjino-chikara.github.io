@@ -230,6 +230,7 @@ details.more[open] summary{margin-bottom:4px}
 .vchip time{color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums}
 .vchip.seated{border-color:var(--navy);box-shadow:inset 3px 0 0 var(--navy)}
 .vchip.prog{border-color:var(--gold);box-shadow:inset 3px 0 0 var(--gold)}
+.vchip.hl{background:var(--gold-soft);border-color:var(--gold-2);font-weight:700}
 .chips.tight{gap:5px;max-width:380px}
 .vn-logo{display:flex;align-items:center;gap:8px;min-width:0}
 .vlogo{width:26px;height:26px;border-radius:6px;object-fit:contain;background:#fff;border:1px solid var(--line);flex:0 0 26px;padding:2px}
@@ -499,12 +500,14 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
         </div></div>
         <div class="filterbar" id="hr-filters">
           <div class="seg" id="hr-tagseg"></div>
+          <select id="hr-vendor" class="st" onchange="pages.hr=0;renderHr()"><option value="">ベンダー：指定なし</option></select>
+          <select id="hr-vmode" class="st" onchange="pages.hr=0;renderHr()"><option value="linked">そのベンダーにつないだ人事</option><option value="seated">着座済みの人事</option><option value="not">まだつないでいない人事</option><option value="interest">興味あり（未つなぎ含む）</option></select>
           <select id="hr-act" class="st" onchange="pages.hr=0;renderHr()"><option value="">最終活動：すべて</option><option>60日以内</option><option>61〜180日</option><option>180日超</option><option>記録なし</option></select>
           <select id="hr-size" class="st" onchange="pages.hr=0;renderHr()"><option value="">規模：すべて</option><option>〜50名</option><option>50〜300名</option><option>300〜1,000名</option><option>1,000名〜</option></select>
           <select id="hr-mid" class="st" onchange="pages.hr=0;renderHr()"><option value="">中途採用数：すべて</option><option value="0">0名</option><option value="1-10">1〜10名</option><option value="11-30">11〜30名</option><option value="31-50">31〜50名</option><option value="51-100">51〜100名</option><option value="101">101名以上</option></select>
           <select id="hr-new" class="st" onchange="pages.hr=0;renderHr()"><option value="">新卒採用数：すべて</option><option value="0">0名</option><option value="1-10">1〜10名</option><option value="11-30">11〜30名</option><option value="31-50">31〜50名</option><option value="51-100">51〜100名</option><option value="101">101名以上</option></select>
           <select id="hr-area" class="st" onchange="pages.hr=0;renderHr()"><option value="">関心領域：すべて</option></select>
-          <button class="ghost" onclick="['hr-size','hr-mid','hr-new','hr-area','hr-f','hr-act'].forEach(i=>document.getElementById(i).value='');document.getElementById('hr-q').value='';hrTag='';renderHr()">条件をクリア</button>
+          <button class="ghost" onclick="['hr-size','hr-mid','hr-new','hr-area','hr-f','hr-act','hr-vendor'].forEach(i=>document.getElementById(i).value='');document.getElementById('hr-vmode').value='linked';document.getElementById('hr-q').value='';hrTag='';renderHr()">条件をクリア</button>
         </div>
         <p class="mini" style="margin:-4px 0 10px">人事の行を押すと、回答内容の詳細とつないだ企業の一覧が開きます。タグ・受取方法・連絡先・メモはそこで編集できます。</p>
         <div class="tablewrap"><table style="min-width:1040px">
@@ -644,7 +647,7 @@ const INVOICE=["未請求","請求済","入金済"],PAYOUT=["未払い","支払�
 let curTab='home';let leadFilter='未対応';
 const REFERRER_FEE=3000,REFERRAL_BONUS=10000;
 function hrRef(company,name){const h=(A.hr||[]).find(x=>x.key===String(company).trim()+'|'+String(name).trim());return h&&h.referrer?h.referrer:'';}
-function vchip(r,vmap,kind){const vd=vmap[r.vendorId]||{};const name=vd.company||r.vendorName;const logo=vd.logo?`<img src="${esc(vd.logo)}" alt="" loading="lazy" onerror="this.remove()">`:`<i>${esc((name||'?').slice(0,1))}</i>`;const d=r.date?`<time>${esc(kind==='seated'?r.date.slice(2,10):r.date.slice(5,10))}</time>`:'';return `<span class="vchip ${kind}" title="${esc(r.vendorName)}${r.date?' ・ '+esc(r.date):''}">${logo}<span>${esc(name)}</span>${d}</span>`;}
+function vchip(r,vmap,kind){const vd=vmap[r.vendorId]||{};const hl=(document.getElementById('hr-vendor')||{}).value===r.vendorId?' hl':'';const name=vd.company||r.vendorName;const logo=vd.logo?`<img src="${esc(vd.logo)}" alt="" loading="lazy" onerror="this.remove()">`:`<i>${esc((name||'?').slice(0,1))}</i>`;const d=r.date?`<time>${esc(kind==='seated'?r.date.slice(2,10):r.date.slice(5,10))}</time>`:'';return `<span class="vchip ${kind}${hl}" title="${esc(r.vendorName)}${r.date?' ・ '+esc(r.date):''}">${logo}<span>${esc(name)}</span>${d}</span>`;}
 function mark(company,name){const r=hrRef(company,name);return r?`<span class="mk" title="紹介：${esc(r)}">🌸</span>`:'';}
 const API=(window.CONFIG&&CONFIG.API_URL)||"";
 const LINE_URL=(window.CONFIG&&CONFIG.LINE_URL)||"#";
@@ -933,6 +936,8 @@ function renderHr(){
   const q=(document.getElementById('hr-q').value||'').trim();const f=document.getElementById('hr-f').value;
   const fact=document.getElementById('hr-act').value;const fs=document.getElementById('hr-size').value,fm=document.getElementById('hr-mid').value,fn=document.getElementById('hr-new').value,fa=document.getElementById('hr-area').value;
   const areaSel=document.getElementById('hr-area');if(areaSel.options.length===1)AREAS.forEach(a=>{const o=document.createElement('option');o.textContent=a;areaSel.appendChild(o);});
+  const vsel=document.getElementById('hr-vendor');if(vsel.options.length===1){A.vendors.slice().sort((a,b)=>(b.published-a.published)||(a.company||'').localeCompare(b.company||'','ja')).forEach(v=>{const o=document.createElement('option');o.value=v.id;o.textContent=(v.company||v.name)+(v.published?'':'（非掲載）');vsel.appendChild(o);});}
+  const fv=vsel.value,fvm=document.getElementById('hr-vmode').value;
   const vmap={};A.vendors.forEach(x=>vmap[x.id]=x);
   const all=hrRecords();
   const tagCounts={};all.forEach(h=>(h.tags||[]).forEach(t=>tagCounts[t]=(tagCounts[t]||0)+1));
@@ -940,9 +945,11 @@ function renderHr(){
   let rows=all.filter(h=>!q||(h.company+h.name+h.vnames).includes(q));
   if(hrTag)rows=rows.filter(h=>(h.tags||[]).includes(hrTag));
   if(fact)rows=rows.filter(h=>h.act===fact);if(fs)rows=rows.filter(h=>h.size===fs);if(fm)rows=rows.filter(h=>numBand(h.midcareer)===fm);if(fn)rows=rows.filter(h=>numBand(h.newgrad)===fn);if(fa)rows=rows.filter(h=>(h.areas||[]).includes(fa));
+  if(fv){rows=rows.filter(h=>{const rs=h.rs.filter(r=>r.vendorId===fv);const linked=rs.some(r=>r.status==='日程調整中'||r.status==='着座済み');const seatedV=rs.some(r=>r.status==='着座済み');const interest=rs.some(r=>r.rate>=2);
+      if(fvm==='linked')return linked;if(fvm==='seated')return seatedV;if(fvm==='not')return !linked;if(fvm==='interest')return interest&&!linked;return true;});}
   if(f==='seated')rows=rows.filter(h=>h.seated.length);if(f==='progress')rows=rows.filter(h=>h.prog.length);if(f==='none')rows=rows.filter(h=>!h.seated.length&&!h.prog.length);if(f==='month')rows=rows.filter(h=>h.monthLinked.length);if(f==='ref')rows=rows.filter(h=>h.referrer);
   rows.sort((a,b)=>{if(!!a.last!==!!b.last)return a.last?-1:1;if(a.last!==b.last)return a.last<b.last?1:-1;return (a.company||'').localeCompare(b.company||'','ja');});
-  document.getElementById('hr-count').textContent=`${rows.length}名`;pager('hr',rows.length,'hr-pager');
+  const vdesc=fv?`（${esc((A.vendors.find(v=>v.id===fv)||{}).company||'')}：${{linked:'つないだ',seated:'着座済み',not:'未つなぎ',interest:'興味あり・未つなぎ'}[fvm]}）`:'';document.getElementById('hr-count').innerHTML=`${rows.length}名${vdesc}`;pager('hr',rows.length,'hr-pager');
   const vn=r=>esc((vmap[r.vendorId]||{}).company||r.vendorName);
   document.getElementById('hr-rows').innerHTML=rows.length?page('hr',rows).map(h=>{
     const seatedHtml=h.seated.length?`<div class="chips tight">${h.seated.slice().sort((a,b)=>((b.date||'')>(a.date||'')?1:-1)).map(r=>vchip(r,vmap,'seated')).join('')}</div>`:'<span class="mini">—</span>';
