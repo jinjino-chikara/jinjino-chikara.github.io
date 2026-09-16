@@ -494,13 +494,13 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
         <div class="sec"><h2>登録されている人事 <span class="mini" id="hr-count"></span></h2><div class="tools"><span id="hr-pager"></span>
           <input id="hr-q" placeholder="会社名・氏名・企業名で検索" style="width:220px;padding:8px 10px" oninput="pages.hr=0;renderHr()">
           <select id="hr-f" class="st" style="padding:8px 10px" onchange="pages.hr=0;renderHr()"><option value="">つなぎ状況：すべて</option><option value="month">今月つないだ</option><option value="seated">着座済みがある</option><option value="progress">日程調整中がある</option><option value="none">まだつないでいない</option><option value="ref">紹介経由の人事</option></select>
-          <button class="ghost" onclick="copyHrTsv()">コピー</button><button class="ghost" onclick="downloadCsv('人事一覧',[['会社','規模','氏名','役職','活動状況','タグ','紹介者','関心領域','新卒採用','中途採用','着座済み企業','協力費累計','受取方法','連絡先','メモ']].concat(hrRecords().map(h=>[h.company,h.size,h.name,h.role,h.act,(h.tags||[]).join('、'),h.referrer||'',(h.areas||[]).join('、'),h.newgrad||'',h.midcareer||'',h.seated.map(r=>r.vendorName).join('、'),h.fee,h.payment,h.contact,h.memo])))">CSV</button>
+          <button class="ghost" onclick="copyHrTsv()">コピー</button><button class="ghost" onclick="downloadCsv('人事一覧',[['会社','規模','氏名','役職','最終活動','タグ','紹介者','関心領域','新卒採用','中途採用','着座済み企業','協力費累計','受取方法','連絡先','メモ']].concat(hrRecords().map(h=>[h.company,h.size,h.name,h.role,h.lastAct||'',(h.tags||[]).join('、'),h.referrer||'',(h.areas||[]).join('、'),h.newgrad||'',h.midcareer||'',h.seated.map(r=>r.vendorName).join('、'),h.fee,h.payment,h.contact,h.memo])))">CSV</button>
           <button class="ghost" onclick="act('backfill_hr','',
             '既存の回答から人事一覧を作りました')">回答から一覧を作り直す</button>
         </div></div>
         <div class="filterbar" id="hr-filters">
           <div class="seg" id="hr-tagseg"></div>
-          <select id="hr-act" class="st" onchange="pages.hr=0;renderHr()"><option value="">活動状況：すべて</option><option>活動中</option><option>休眠</option><option>長期未接触</option></select>
+          <select id="hr-act" class="st" onchange="pages.hr=0;renderHr()"><option value="">最終活動：すべて</option><option>60日以内</option><option>61〜180日</option><option>180日超</option><option>記録なし</option></select>
           <select id="hr-size" class="st" onchange="pages.hr=0;renderHr()"><option value="">規模：すべて</option><option>〜50名</option><option>50〜300名</option><option>300〜1,000名</option><option>1,000名〜</option></select>
           <select id="hr-mid" class="st" onchange="pages.hr=0;renderHr()"><option value="">中途採用数：すべて</option><option value="0">0名</option><option value="1-10">1〜10名</option><option value="11-30">11〜30名</option><option value="31-50">31〜50名</option><option value="51-100">51〜100名</option><option value="101">101名以上</option></select>
           <select id="hr-new" class="st" onchange="pages.hr=0;renderHr()"><option value="">新卒採用数：すべて</option><option value="0">0名</option><option value="1-10">1〜10名</option><option value="11-30">11〜30名</option><option value="31-50">31〜50名</option><option value="51-100">51〜100名</option><option value="101">101名以上</option></select>
@@ -509,7 +509,7 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
         </div>
         <p class="mini" style="margin:-4px 0 10px">人事の行を押すと、回答内容の詳細とつないだ企業の一覧が開きます。タグ・受取方法・連絡先・メモはそこで編集できます。</p>
         <div class="tablewrap"><table style="min-width:1040px">
-          <thead><tr><th style="width:120px">活動 / タグ</th><th>会社 / 規模</th><th>氏名 / 役職</th><th>採用数（新卒 / 中途）</th><th>関心領域</th><th>着座済み（つなぎ済み）</th><th>日程調整中</th><th>協力費累計</th></tr></thead>
+          <thead><tr><th style="width:130px">最終活動 / タグ</th><th>会社 / 規模</th><th>氏名 / 役職</th><th>採用数（新卒 / 中途）</th><th>関心領域</th><th>着座済み（つなぎ済み）</th><th>日程調整中</th><th>協力費累計</th></tr></thead>
           <tbody id="hr-rows"></tbody></table></div>
         <div style="margin-top:12px"><button class="primary" style="width:auto;margin:0" onclick="openNewHr()">＋ 人事を追加（全項目を手入力）</button></div>
       </div>
@@ -869,7 +869,7 @@ function hrRecords(){
     // 活動＝人事が実際に動いた日：提案シートの回答日（旧シート取り込み分は除く）と商談日
     const acts=rs.flatMap(r=>[(r.memo||'').startsWith('旧シート')?'':(r.ts||''),r.date||'']).map(x=>String(x).slice(0,10)).filter(x=>/^\d{4}\/\d{2}\/\d{2}$/.test(x));
     const lastAct=acts.sort().pop()||'';const days=lastAct?Math.max(0,Math.floor((TODAY-new Date(lastAct.replace(/\//g,'-')))/86400000)):null;
-    const autoAct=days==null?'長期未接触':days<=60?'活動中':days<=180?'休眠':'長期未接触';const act=h.actOverride||autoAct;
+    const act=days==null?'記録なし':days<=60?'60日以内':days<=180?'61〜180日':'180日超';
     return {...h,rs,seated,prog,monthLinked,vnames:rs.map(vn).join(' '),last,lastAct,days,act,fee:seated.reduce((a,r)=>a+(Number(r.fee)||0),0)};});
 }
 let meetView='list',meetStage='all';
@@ -947,7 +947,7 @@ function renderHr(){
   document.getElementById('hr-rows').innerHTML=rows.length?page('hr',rows).map(h=>{
     const seatedHtml=h.seated.length?`<div class="chips tight">${h.seated.slice().sort((a,b)=>((b.date||'')>(a.date||'')?1:-1)).map(r=>vchip(r,vmap,'seated')).join('')}</div>`:'<span class="mini">—</span>';
     const progHtml=h.prog.length?`<div class="chips tight">${h.prog.map(r=>vchip(r,vmap,'prog')).join('')}</div>`:'<span class="mini">—</span>';
-    const actBadge=`<span class="act act-${h.act==='活動中'?'on':h.act==='休眠'?'idle':'off'}" title="${h.actOverride?'手動設定':(h.lastAct?'最終活動 '+esc(h.lastAct)+'（'+h.days+'日前）':'活動記録なし')}">${h.act}${h.actOverride?'<small>手動</small>':''}</span>`;
+    const actBadge=`<span class="act act-${h.act==='60日以内'?'on':h.act==='61〜180日'?'idle':'off'}" title="最終活動（回答または商談）：${h.lastAct?esc(h.lastAct):'記録なし'}">${h.lastAct?'最終 '+h.days+'日前':'記録なし'}</span>`;
     const tags=actBadge+((h.tags||[]).map(t=>`<span class="tag tg-${HR_TAGS.indexOf(t)}">${esc(t)}</span>`).join(' ')||'');
     return `<tr class="hrrow" onclick="openHr('${esc(h.key)}')">
       <td>${tags}</td>
@@ -991,7 +991,7 @@ function hrForm(h,isNew){
       <div class="field"><label>紹介者</label>${inp('e-referrer',h.referrer,'例：位野花岳彦（アドインテ）','list="referrers"')}<datalist id="referrers">${[...new Set((A.hr||[]).map(x=>x.referrer).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join('')}</datalist></div>
       <div class="field"><label>受取方法</label>${sel('e-payment',PAYMENT,h.payment)}</div>
       <div class="field"><label>連絡先</label>${inp('e-contact',h.contact,'LINE名・メール・電話')}</div>
-      <div class="field"><label>活動状況（手動で固定する場合）</label>${sel('e-act',ACTS,h.actOverride)}</div>
+
     </div>
     <div class="field"><label>タグ</label><div class="chips" id="e-tags">${HR_TAGS.map((t,i)=>`<button type="button" class="chip tg-${i}" aria-pressed="${tags.has(t)}" onclick="this.setAttribute('aria-pressed',this.getAttribute('aria-pressed')!=='true')">${t}</button>`).join('')}</div></div>
     <div class="field"><label>メモ</label><textarea id="e-memo" rows="2">${esc(h.memo||'')}</textarea></div>
@@ -1000,12 +1000,12 @@ function hrForm(h,isNew){
 function readHrForm(){
   const g=id=>(document.getElementById(id)||{}).value||'';
   return {company:g('e-company').trim(),name:g('e-name').trim(),role:g('e-role'),size:g('e-size'),headcount:g('e-headcount'),hp:g('e-hp'),newgrad:g('e-newgrad'),midcareer:g('e-midcareer'),hardjob:g('e-hardjob'),timing:g('e-timing'),
-    areas:[...document.querySelectorAll('#e-areas [aria-pressed="true"]')].map(b=>b.textContent).join('、'),methods:g('e-methods'),worry:g('e-worry'),referrer:g('e-referrer'),payment:g('e-payment'),contact:g('e-contact'),actOverride:g('e-act'),
+    areas:[...document.querySelectorAll('#e-areas [aria-pressed="true"]')].map(b=>b.textContent).join('、'),methods:g('e-methods'),worry:g('e-worry'),referrer:g('e-referrer'),payment:g('e-payment'),contact:g('e-contact'),
     tags:[...document.querySelectorAll('#e-tags [aria-pressed="true"]')].map(b=>b.textContent).join('、'),memo:g('e-memo')};
 }
 async function saveHrAll(key){
   const f=readHrForm();const h=(A.hr||[]).find(x=>x.key===key);
-  const fields={role:f.role,size:f.size,headcount:f.headcount,hp:f.hp,newgrad:f.newgrad,midcareer:f.midcareer,hardjob:f.hardjob,timing:f.timing,areas:f.areas,methods:f.methods,worry:f.worry,referrer:f.referrer,payment:f.payment,contact:f.contact,actOverride:f.actOverride,tags:f.tags,memo:f.memo};
+  const fields={role:f.role,size:f.size,headcount:f.headcount,hp:f.hp,newgrad:f.newgrad,midcareer:f.midcareer,hardjob:f.hardjob,timing:f.timing,areas:f.areas,methods:f.methods,worry:f.worry,referrer:f.referrer,payment:f.payment,contact:f.contact,tags:f.tags,memo:f.memo};
   if(h){Object.assign(h,fields,{areas:f.areas.split('、').filter(Boolean),tags:f.tags.split('、').filter(Boolean)});renderHr();}
   try{await api('update_hr',{token,key,fields});store.set('jc_admin',{tok:token,d:A,t:Date.now()});toast('保存しました');}catch(e){toast('保存できませんでした：'+e.message);}
 }
@@ -1049,7 +1049,7 @@ function openHr(key){
   const h=hrRecords().find(x=>x.key===key);if(!h)return;curHr=key;
   const vmap={};A.vendors.forEach(x=>vmap[x.id]=x);
   document.getElementById('hr-m-body').innerHTML=`
-    <div class="vhead" style="margin-bottom:6px"><div><div class="vname">${h.referrer?'🌸 ':''}${esc(h.name)}<span class="mini">　${esc(h.role||'')}</span></div><div class="vco">${esc(h.company)} ・ <span class="act act-${h.act==='活動中'?'on':h.act==='休眠'?'idle':'off'}">${h.act}</span>${h.lastAct?`<span class="mini"> 最終活動 ${esc(h.lastAct)}</span>`:''}</div></div>
+    <div class="vhead" style="margin-bottom:6px"><div><div class="vname">${h.referrer?'🌸 ':''}${esc(h.name)}<span class="mini">　${esc(h.role||'')}</span></div><div class="vco">${esc(h.company)} ・ <span class="act act-${h.act==='60日以内'?'on':h.act==='61〜180日'?'idle':'off'}">${h.lastAct?'最終活動 '+esc(h.lastAct)+'（'+h.days+'日前）':'活動記録なし'}</span></div></div>
       <div class="mini">協力費累計 ${h.fee?yen(h.fee):'—'}</div></div>
     <div class="tabs" style="margin-top:8px"><button role="tab" aria-selected="true" onclick="hrSub(this,'hr-p-meet')">つないだ企業（${h.rs.length}）</button><button role="tab" aria-selected="false" onclick="hrSub(this,'hr-p-edit')">情報を編集</button></div>
     <div id="hr-p-meet">
@@ -1215,7 +1215,7 @@ async function bulkLeads(status){if(!status||!selLeads.size)return;const rows=A.
   try{for(const r of rows){await api('update_response',{token,id:r.id,vendorId:r.vendorId,fields:{status}});}store.set('jc_admin',{tok:token,d:A,t:Date.now()});toast(`${rows.length}件を「${status}」にしました`);}catch(e){toast('保存できませんでした：'+e.message);loadAdmin();}}
 function globalSearch(q){const box=document.getElementById('g-results');q=(q||'').trim();if(!q){box.hidden=true;return;}
   const vmap={};A.vendors.forEach(x=>vmap[x.id]=x);const out=[];
-  hrRecords().filter(h=>(h.company+h.name).includes(q)).slice(0,8).forEach(h=>out.push(`<button onclick="document.getElementById('g-results').hidden=true;openHr('${esc(h.key)}')"><span class="k">人事</span><span>${h.referrer?'🌸 ':''}${esc(h.name)}</span><span class="mini">${esc(h.company)} ・ ${esc(h.act)}</span></button>`));
+  hrRecords().filter(h=>(h.company+h.name).includes(q)).slice(0,8).forEach(h=>out.push(`<button onclick="document.getElementById('g-results').hidden=true;openHr('${esc(h.key)}')"><span class="k">人事</span><span>${h.referrer?'🌸 ':''}${esc(h.name)}</span><span class="mini">${esc(h.company)}${h.lastAct?' ・ 最終 '+h.days+'日前':''}</span></button>`));
   A.vendors.filter(v=>((v.company||'')+v.name).includes(q)).slice(0,6).forEach(v=>out.push(`<button onclick="document.getElementById('g-results').hidden=true;openVendorStats('${v.id}')"><span class="k">ベンダー</span>${v.logo?`<img class="vlogo" src="${esc(v.logo)}" alt="" onerror="this.remove()">`:''}<span>${esc(v.company||v.name)}</span><span class="mini">${esc(v.name)}</span></button>`));
   box.innerHTML=out.join('')||'<button disabled><span class="mini">該当なし</span></button>';box.hidden=false;}
 document.addEventListener('click',e=>{if(!e.target.closest('.home-search'))(document.getElementById('g-results')||{}).hidden=true;});
