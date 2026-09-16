@@ -301,6 +301,7 @@ td input.cell.time{width:78px}
 .legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--muted)}.lg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:middle}
 @media (max-width:700px){.cd{min-height:64px}.ev small{display:none}}
 td .ghost{white-space:nowrap}
+.unit{display:flex;align-items:center;gap:8px}.unit input{flex:1}.unit span{color:var(--muted);font-size:14px}
 .loading{color:var(--faint);font-size:13px;padding:24px;text-align:center}
 .err{background:#FDECEA;color:#A32D1E;border:1px solid #F1B7AE;border-radius:8px;padding:10px 14px;font-size:13.5px;margin-top:12px}
 .login{max-width:420px;margin:40px auto}
@@ -342,8 +343,8 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
       <details class="more" id="more-field">
         <summary>任意：採用状況をもう少し教えてください（より合う提案ができます）</summary>
         <div class="grid2">
-          <div class="field"><label for="f-newgrad">年間の採用人数（新卒）</label><select id="f-newgrad"><option value="">未選択</option><option>0名</option><option>1〜10名</option><option>11〜30名</option><option>31〜50名</option><option>51〜100名</option><option>101名以上</option></select></div>
-          <div class="field"><label for="f-mid">年間の採用人数（中途）</label><select id="f-mid"><option value="">未選択</option><option>0名</option><option>1〜10名</option><option>11〜30名</option><option>31〜50名</option><option>51〜100名</option><option>101名以上</option></select></div>
+          <div class="field"><label for="f-newgrad">年間の採用人数（新卒）</label><div class="unit"><input id="f-newgrad" type="number" inputmode="numeric" min="0" placeholder="例：5"><span>名</span></div></div>
+          <div class="field"><label for="f-mid">年間の採用人数（中途）</label><div class="unit"><input id="f-mid" type="number" inputmode="numeric" min="0" placeholder="例：12"><span>名</span></div></div>
         </div>
         <div class="field"><label for="f-hard">いま最も採用に苦戦している職種</label><select id="f-hard"><option value="">未選択</option><option>エンジニア・IT専門職</option><option>営業・ビジネス職</option><option>製造・現場（ブルーカラー）</option><option>サービス・販売・店舗</option><option>管理部門・バックオフィス</option><option>医療・介護</option><option>施工管理・建設</option><option>その他</option></select></div>
         <div class="field"><label>いま抱えている課題（複数可）</label><div class="chips" id="worries"></div></div>
@@ -779,7 +780,7 @@ async function submitAnswers(){
   const btn=document.getElementById('submit');btn.disabled=true;btn.textContent='送信中…';showErr('s2-err','');
   try{
     if(!cur.rid)cur.rid='r'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-    const j=await api('submit',{rid:cur.rid,company:v('f-company'),name:v('f-name'),role:v('f-role'),size:v('f-size'),areas:[...cur.areas],ratings:cur.ratings,newgrad:v('f-newgrad'),midcareer:v('f-mid'),hardjob:v('f-hard'),worry:[...cur.worries].join('、')});
+    const j=await api('submit',{rid:cur.rid,company:v('f-company'),name:v('f-name'),role:v('f-role'),size:v('f-size'),areas:[...cur.areas],ratings:cur.ratings,newgrad:v('f-newgrad')!==''?v('f-newgrad')+'名':'',midcareer:v('f-mid')!==''?v('f-mid')+'名':'',hardjob:v('f-hard'),worry:[...cur.worries].join('、')});
     setSteps(3);document.getElementById('s2').hidden=true;document.getElementById('s3').hidden=false;
     const p=document.getElementById('picked');p.innerHTML=(j.picked||[]).map(n=>`<span>${esc(n)}</span>`).join('');
     if(!(j.picked||[]).length)document.querySelector('#s3 .lead').textContent='今回はご興味に合うサービスがなかったとのこと、承知しました。新しいサービスが加わった際に公式LINEでご案内します。';
@@ -978,8 +979,8 @@ function hrForm(h,isNew){
       <div class="field"><label>従業員規模</label>${sel('e-size',['',...SIZES],h.size)}</div>
       <div class="field"><label>具体的な従業員数</label>${inp('e-headcount',h.headcount,'例：186')}</div>
       <div class="field"><label>HP</label>${inp('e-hp',h.hp,'https://')}</div>
-      <div class="field"><label>年間採用 新卒</label>${sel('e-newgrad',HIRE,h.newgrad)}</div>
-      <div class="field"><label>年間採用 中途</label>${sel('e-midcareer',HIRE,h.midcareer)}</div>
+      <div class="field"><label>年間採用 新卒（人数）</label>${inp('e-newgrad',h.newgrad,'例：5名','inputmode="numeric"')}</div>
+      <div class="field"><label>年間採用 中途（人数）</label>${inp('e-midcareer',h.midcareer,'例：12名','inputmode="numeric"')}</div>
       <div class="field"><label>苦戦している職種</label>${sel('e-hardjob',HARD,h.hardjob)}</div>
       <div class="field"><label>検討時期</label>${sel('e-timing',TIMING,h.timing)}</div>
     </div>
@@ -997,8 +998,8 @@ function hrForm(h,isNew){
     <button class="primary" style="margin-top:14px" onclick="${isNew?'saveNewHr()':`saveHrAll('${esc(h.key)}')`}">${isNew?'この内容で人事を追加':'人事の情報を保存'}</button>`;
 }
 function readHrForm(){
-  const g=id=>(document.getElementById(id)||{}).value||'';
-  return {company:g('e-company').trim(),name:g('e-name').trim(),role:g('e-role'),size:g('e-size'),headcount:g('e-headcount'),hp:g('e-hp'),newgrad:g('e-newgrad'),midcareer:g('e-midcareer'),hardjob:g('e-hardjob'),timing:g('e-timing'),
+  const g=id=>(document.getElementById(id)||{}).value||'';const nm=x=>/^\d+$/.test(x.trim())?x.trim()+'名':x.trim();
+  return {company:g('e-company').trim(),name:g('e-name').trim(),role:g('e-role'),size:g('e-size'),headcount:g('e-headcount'),hp:g('e-hp'),newgrad:nm(g('e-newgrad')),midcareer:nm(g('e-midcareer')),hardjob:g('e-hardjob'),timing:g('e-timing'),
     areas:[...document.querySelectorAll('#e-areas [aria-pressed="true"]')].map(b=>b.textContent).join('、'),methods:g('e-methods'),worry:g('e-worry'),referrer:g('e-referrer'),payment:g('e-payment'),contact:g('e-contact'),
     tags:[...document.querySelectorAll('#e-tags [aria-pressed="true"]')].map(b=>b.textContent).concat(((A.hr||[]).find(x=>x.key===curHr)||{tags:[]}).tags.filter(t=>HIDDEN_TAGS.has(t))).join('、'),memo:g('e-memo')};
 }
