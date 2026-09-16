@@ -293,6 +293,16 @@ td input.cell.time{width:78px}
 .vstat{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin:10px 0}
 .vstat div{background:#fff;padding:10px 12px}.vstat small{display:block;color:var(--muted);font-size:11.5px}.vstat b{font-size:20px;font-family:var(--serif);color:var(--navy)}
 .bar{height:8px;background:var(--bg-2);border-radius:4px;overflow:hidden;display:flex}.bar i{display:block;height:100%}
+.calhead{display:flex;gap:8px;align-items:center;margin:4px 0 10px}.calhead b{font-family:var(--serif);font-size:18px;color:var(--navy);margin:0 6px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.cw{background:var(--bg-2);text-align:center;font-size:12px;color:var(--muted);padding:6px 0}
+.cd{background:#fff;min-height:96px;padding:6px;font-size:12px}.cd.pad{background:var(--bg-2)}.cd.we{background:#FBFBFD}.cd.today{background:var(--gold-soft)}
+.cd .dn{font-weight:600;color:var(--navy);margin-bottom:4px;font-variant-numeric:tabular-nums}
+.ev{border-left:3px solid var(--navy);background:var(--bg-2);border-radius:4px;padding:3px 6px;margin-bottom:3px;cursor:pointer;line-height:1.3;overflow:hidden}
+.ev span{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ev small{display:block;color:var(--muted);font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--muted)}.lg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:middle}
+@media (max-width:700px){.cd{min-height:64px}.ev small{display:none}}
+td .ghost{white-space:nowrap}
 .loading{color:var(--faint);font-size:13px;padding:24px;text-align:center}
 .err{background:#FDECEA;color:#A32D1E;border:1px solid #F1B7AE;border-radius:8px;padding:10px 14px;font-size:13.5px;margin-top:12px}
 .login{max-width:420px;margin:40px auto}
@@ -403,6 +413,7 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
     <div class="panel login" id="login">
       <div class="eyebrow">Admin</div>
       <h2 class="h-title" style="font-size:20px">管理画面</h2>
+      <div class="field"><label for="who">あなたの名前（操作ログに残ります）</label><input id="who" placeholder="例：松田" autocomplete="nickname"></div>
       <div class="field"><label for="tok">合言葉</label><input id="tok" type="password" autocomplete="current-password"></div>
       <button class="primary" onclick="login()">開く</button>
       <div id="login-err"></div>
@@ -415,6 +426,7 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
         <button role="tab" aria-selected="false" data-tab="hr" onclick="setTab('hr')">人事一覧</button>
         <button role="tab" aria-selected="false" data-tab="sales" onclick="setTab('sales')">売上・支払</button>
         <button role="tab" aria-selected="false" data-tab="vendors" onclick="setTab('vendors')">ベンダー</button>
+        <button role="tab" aria-selected="false" data-tab="settings" onclick="setTab('settings')">設定</button>
       </div>
       <div class="tabp" id="tab-home">
         <div class="home-search"><input id="g-q" placeholder="人事名・会社名・ベンダー名で検索（全体）" oninput="globalSearch(this.value)" autocomplete="off"><div class="g-results" id="g-results" hidden></div></div>
@@ -463,7 +475,7 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
 
       <div class="tabp" id="tab-meet" hidden>
         <div class="sec"><h2>商談 <span class="mini" id="m-count"></span></h2><div class="tools"><span id="m-pager"></span>
-          <div class="seg" id="m-view"><button type="button" aria-pressed="true" onclick="meetView='list';renderMeet()">日時順</button><button type="button" aria-pressed="false" onclick="meetView='vendor';renderMeet()">ベンダーごと</button></div>
+          <div class="seg" id="m-view"><button type="button" aria-pressed="true" onclick="meetView='list';renderMeet()">日時順</button><button type="button" aria-pressed="false" onclick="meetView='vendor';renderMeet()">ベンダーごと</button><button type="button" aria-pressed="false" onclick="meetView='cal';renderMeet()">カレンダー</button></div>
           <button class="primary" style="width:auto;margin:0;padding:9px 14px;font-size:13px" onclick="openMeetModal()">＋ 商談を追加</button>
           <button class="ghost" onclick="copyMeetTsv()">コピー</button><button class="ghost" onclick="downloadCsv('商談',[['商談日','時刻','会社','氏名','ベンダー','サービス','つなぎ状況','商談結果','売上','協力費','メモ']].concat(meetRows().map(r=>[r.date,r.time||'',r.company,r.name,(A.vendors.find(v=>v.id===r.vendorId)||{}).company||r.vendorName,r.vendorName,r.status,r.result||'未確定',r.sales,r.fee,r.memo||''])))">CSV</button>
         </div></div>
@@ -521,12 +533,12 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
         <div class="ssub" id="ss-batch" hidden>
         <div class="batches">
           <div><div class="sec" style="margin-top:18px"><h2>ベンダー別 請求一覧</h2></div>
-            <div class="tablewrap"><table style="min-width:420px"><thead><tr><th>ベンダー</th><th>件数</th><th>請求額</th><th>状況</th><th>一括変更</th></tr></thead><tbody id="s-byvendor"></tbody></table></div></div>
+            <div class="tablewrap"><table style="min-width:420px"><thead><tr><th>ベンダー</th><th>件数</th><th>請求額</th><th>状況</th><th>一括変更</th><th>明細</th></tr></thead><tbody id="s-byvendor"></tbody></table></div></div>
           <div><div class="sec" style="margin-top:18px"><h2>紹介者別 報酬一覧</h2></div>
             <div class="tablewrap"><table style="min-width:420px"><thead><tr><th>紹介者</th><th>紹介報酬</th><th>商談報酬</th><th>合計</th></tr></thead><tbody id="s-byref"></tbody></table></div>
             <p class="mini" style="margin-top:6px">紹介報酬 10,000円／紹介した人事1名（その人事の初回着座月に計上）、商談報酬 3,000円／着座1件。支払サイクルは人事の協力費と同じ想定です。</p></div>
           <div><div class="sec" style="margin-top:18px"><h2>人事別 協力費 振込一覧</h2></div>
-            <div class="tablewrap"><table style="min-width:420px"><thead><tr><th>人事</th><th>件数</th><th>振込額</th><th>受取方法</th><th>状況</th><th>一括変更</th></tr></thead><tbody id="s-byhr"></tbody></table></div></div>
+            <div class="tablewrap"><table style="min-width:420px"><thead><tr><th>人事</th><th>件数</th><th>振込額</th><th>受取方法</th><th>状況</th><th>一括変更</th><th>明細</th></tr></thead><tbody id="s-byhr"></tbody></table></div></div>
         </div>
         </div>
         <div class="ssub" id="ss-rows" hidden>
@@ -558,6 +570,37 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
         <button class="primary" style="margin-top:4px" onclick="addVendor()">追加する</button>
       </div>
       </div><!-- /tab-vendors -->
+
+      <div class="tabp" id="tab-settings" hidden>
+        <div class="sec"><h2>通知</h2></div>
+        <div class="panel" style="padding:18px 20px">
+          <p class="mini" style="margin:0 0 10px">人事が提案シートに回答した瞬間の通知と、毎朝のリマインド（今日・明日の商談、未対応・承認待ちの件数）を送ります。メールはすぐ使えます。LINEに送る場合はLINE公式アカウントのMessaging APIトークンと送信先IDが必要です。</p>
+          <div class="grid2">
+            <div class="field"><label>通知先メールアドレス</label><input id="st-mail" placeholder="例：k.matsuta@biz-labo.com"></div>
+            <div class="field"><label>リマインド送信時刻（JST）</label><select id="st-hour"><option value="6">6:00</option><option value="7">7:00</option><option value="8" selected>8:00</option><option value="9">9:00</option><option value="10">10:00</option><option value="12">12:00</option></select></div>
+            <div class="field"><label>LINE チャネルアクセストークン（長期）</label><input id="st-token" type="password" placeholder="設定済みなら空のまま"><div class="mini" id="st-token-state"></div></div>
+            <div class="field"><label>LINE 送信先ID（グループID または ユーザーID）</label><input id="st-lineto" placeholder="Cxxxxxxxx… / Uxxxxxxxx…"></div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+            <button class="primary" style="width:auto;margin:0" onclick="saveSettingsUI()">設定を保存</button>
+            <button class="ghost" onclick="act2('test_notify','テスト通知を送りました')">テスト通知を送る</button>
+            <button class="ghost" onclick="act2('setup_triggers','毎朝のリマインドを有効にしました')">毎朝のリマインドを有効化</button>
+            <button class="ghost" onclick="act2('send_reminder','リマインドを今送りました')">リマインドを今送る</button>
+          </div>
+          <div class="mini" id="st-trig" style="margin-top:8px"></div>
+        </div>
+        <div class="sec"><h2>月間目標</h2></div>
+        <div class="panel" style="padding:18px 20px">
+          <div class="grid2">
+            <div class="field"><label>着座件数の目標（月）</label><input id="st-gseats" inputmode="numeric" placeholder="例：40"></div>
+            <div class="field"><label>確定売上の目標（月・円）</label><input id="st-gsales" inputmode="numeric" placeholder="例：1200000"></div>
+          </div>
+          <button class="primary" style="width:auto;margin-top:14px" onclick="saveSettingsUI()">目標を保存</button>
+        </div>
+        <div class="sec"><h2>操作ログ <span class="mini">直近200件</span></h2></div>
+        <div class="tablewrap"><table style="min-width:700px"><thead><tr><th>日時</th><th>操作者</th><th>操作</th><th>対象</th><th>内容</th></tr></thead><tbody id="log-rows"></tbody></table></div>
+        <p class="note">ログイン時に入れた名前が「操作者」に残ります。通知やリマインドはスプレッドシートの「提案シート_設定」「提案シート_操作ログ」タブに保存されます。</p>
+      </div>
       <p class="note">データはスプレッドシートの「提案シート_」で始まるタブに保存されています。直接編集しても反映されます。</p>
     </div>
   </section>
@@ -594,6 +637,7 @@ const RATE_LABEL={3:"ぜひ聞きたい",2:"少し聞いてみたい",1:"今は�
 const RATE_CLASS={3:"hot",2:"warm",1:"cold"};
 const STATUS=["未対応","日程調整中","着座済み","見送り"];
 const RESULT_AFTER=['承認','非承認'],RESULT_BEFORE=['リスケ','ベンダーNG','その他'];const RESULTS=['未確定',...RESULT_AFTER,...RESULT_BEFORE];
+function priceFor(priceStr,role){const str=String(priceStr||'');const pairs=str.split(/[／,、\n]/).map(x=>x.split(/[:：]/)).filter(p=>p.length===2);if(pairs.length){role=String(role||'');let hit=pairs.find(p=>role.indexOf(p[0].trim())>=0);if(!hit)hit=pairs.find(p=>/担当|全/.test(p[0]))||pairs[0];return Number(hit[1].replace(/[^\d]/g,''))||0;}return Number(str.replace(/[^\d]/g,''))||0;}
 function isCash(r){return r.status==='着座済み'&&r.result==='承認';}
 function resultSelect(r,extraClass){const cur=r.result||'未確定';return `<select class="cell st rs-${RESULTS.indexOf(cur)} ${extraClass||''}" onchange="saveResp('${r.id}','${r.vendorId}','result',this.value)"><option ${cur==='未確定'?'selected':''}>未確定</option><optgroup label="商談後">${RESULT_AFTER.map(o=>`<option ${o===cur?'selected':''}>${o}</option>`).join('')}</optgroup><optgroup label="商談前">${RESULT_BEFORE.map(o=>`<option ${o===cur?'selected':''}>${o}</option>`).join('')}</optgroup></select>`;}
 const INVOICE=["未請求","請求済","入金済"],PAYOUT=["未払い","支払済","辞退"],SURVEY=["未提出","提出済"],PAYMENT=["","個人口座","法人口座","辞退"];
@@ -608,7 +652,7 @@ const q=new URLSearchParams(location.search);
 const preV=q.get('v');
 let vendors=[];          // 掲載中
 let A={vendors:[],responses:[],pending:[],proposed:{},hr:[]}; // 管理用
-let token=sessionStorage.getItem('jc_token')||'';
+let token=sessionStorage.getItem('jc_token')||'';let who=localStorage.getItem('jc_who')||'';
 
 function logoHtml(x){const ini=esc((x.name||'?').slice(0,1));return x.logo?`<img class="logo" src="${esc(x.logo)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'logo ini',textContent:'${ini}'}))">`:`<span class="logo ini">${ini}</span>`;}
 function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
@@ -645,7 +689,7 @@ function fetchRead(url){
 }
 async function api(action,payload){
   if(!API)throw new Error('config.js に API_URL が設定されていません');
-  return fetchJson(API,{method:'POST',body:JSON.stringify({action,...payload})});
+  return fetchJson(API,{method:'POST',body:JSON.stringify({action,by:who||undefined,...payload})});
 }
 async function apiGet(params){
   if(!API)throw new Error('config.js に API_URL が設定されていません');
@@ -661,7 +705,7 @@ function setMode(m){
   if(m==='admin'&&token)loadAdmin();
 }
 window.addEventListener('hashchange',()=>{const h=location.hash.replace('#','');if(h==='admin'||h==='vendor'){document.getElementById('modebar').hidden=false;setMode(h);}else setMode('hr');});
-(function boot(){
+(function boot(){try{const w=document.getElementById('who');if(w&&who)w.value=who;}catch(e){}
   const h=location.hash.replace('#','');
   if(h==='admin'||h==='vendor'){document.getElementById('modebar').hidden=false;setMode(h);}
   if(preV){document.getElementById('areas-field').hidden=true;document.getElementById('more-field').hidden=true;document.getElementById('s1-title').innerHTML='ご案内した<br>サービスについて';document.getElementById('s1-lead').textContent='お名前と会社名をご入力のうえ、次の画面で興味度を選んでください。30秒ほどで終わります。';document.getElementById('to-s2').textContent='サービスを見る';}
@@ -764,6 +808,7 @@ async function submitVendor(){
 /* ---- 管理 ---- */
 async function login(){
   const t=v('tok');showErr('login-err','');const b=document.querySelector('#login .primary');b.disabled=true;b.textContent='確認中…';
+  who=v('who');try{localStorage.setItem('jc_who',who);}catch(e){}
   token=t;
   try{await loadAdmin(true);sessionStorage.setItem('jc_token',t);}
   catch(e){token='';showErr('login-err',e.message);}
@@ -835,7 +880,7 @@ function renderMeet(){
   const all=meetRows();
   const stages=[['all','すべて',all.length],['plan','予定（日程調整中）',all.filter(r=>r.status==='日程調整中').length],['done','実施済（着座）',all.filter(r=>r.status==='着座済み').length],['pending','承認待ち',all.filter(r=>r.status==='着座済み'&&(r.result||'未確定')==='未確定').length]];
   document.getElementById('m-stage').innerHTML=stages.map(([v,l,n])=>`<button type="button" aria-pressed="${meetStage===v}" onclick="meetStage='${v}';renderMeet()">${l}<b>${n}</b></button>`).join('');
-  document.querySelectorAll('#m-view button').forEach((b,i)=>b.setAttribute('aria-pressed',String((i===0)===(meetView==='list'))));
+  document.querySelectorAll('#m-view button').forEach((b,i)=>b.setAttribute('aria-pressed',String(['list','vendor','cal'][i]===meetView)));
   const vs=document.getElementById('m-vendor');const keepV=vs.value;const vids=[...new Set(all.map(r=>r.vendorId))];
   vs.innerHTML='<option value="">ベンダー：すべて</option>'+vids.map(id=>`<option value="${id}">${esc(vmap[id]?.company||all.find(r=>r.vendorId===id).vendorName)}</option>`).join('');if(keepV)vs.value=keepV;
   const ms=document.getElementById('m-month');const keepM=ms.value;const months=[...new Set(all.map(r=>monthOf(r.date)))].sort().reverse();
@@ -859,12 +904,27 @@ function renderMeet(){
   </tr>`;};
   const head=(withVendor)=>`<thead><tr><th>商談日時</th><th>人事</th>${withVendor?'<th>ベンダー</th>':''}<th>つなぎ状況</th><th>商談結果</th><th>売上</th><th>ベンダー請求</th><th>人事支払</th><th>メモ</th></tr></thead>`;
   const body=document.getElementById('m-body');
-  if(!R.length){body.innerHTML='<div class="empty">該当する商談がありません。</div>';return;}
+  if(!R.length&&meetView!=='cal'){body.innerHTML='<div class="empty">該当する商談がありません。</div>';return;}
+  if(meetView==='cal'){renderCal(R,vmap);return;}
   if(meetView==='list'){body.innerHTML=`<div class="tablewrap"><table style="min-width:1180px">${head(true)}<tbody>${page('m',R).map(row).join('')}</tbody></table></div>`;return;}
   const byV={};R.forEach(r=>{(byV[r.vendorId]=byV[r.vendorId]||[]).push(r);});
   body.innerHTML=Object.keys(byV).sort((a,b)=>byV[b].length-byV[a].length).map(id=>{const rs=byV[id];const vd=vmap[id]||{};const next=rs.filter(r=>(r.date||'')>=todayS).sort((a,b)=>dtKey(a).localeCompare(dtKey(b)))[0];
     return `<div class="mv"><div class="mv-head">${vd.logo?`<img class="vlogo" src="${esc(vd.logo)}" alt="" onerror="this.remove()">`:''}<b>${esc(vd.company||rs[0].vendorName)}</b><span class="mini">${esc(rs[0].vendorName)}</span><span class="mini">${rs.length}件 ・ 承認 ${rs.filter(isCash).length} ・ 承認待ち ${rs.filter(r=>r.status==='着座済み'&&(r.result||'未確定')==='未確定').length}${next?' ・ 次回 '+esc(next.date)+(next.time?' '+esc(next.time):''):''}</span></div>
       <div class="tablewrap" style="border:0;border-radius:0;box-shadow:none"><table>${head(false)}<tbody>${rs.map(row).join('')}</tbody></table></div></div>`;}).join('');
+}
+let calMonth=null;
+function renderCal(R,vmap){
+  const base=calMonth?new Date(calMonth+'-01'):new Date();const y=base.getFullYear(),mo=base.getMonth();calMonth=`${y}-${String(mo+1).padStart(2,'0')}`;
+  const first=new Date(y,mo,1),last=new Date(y,mo+1,0);const startPad=first.getDay();const todayS=new Date().toISOString().slice(0,10).replace(/-/g,'/');
+  const byDay={};R.forEach(r=>{const d=(r.date||'').slice(0,10);if(d.startsWith(`${y}/${String(mo+1).padStart(2,'0')}`))(byDay[d]=byDay[d]||[]).push(r);});
+  const colors={};let ci=0;const palette=['#0F1B33','#C9A24A','#1E8E5A','#7A5AF8','#C24B3A','#2A7FB8','#8A6D3B','#4B6584'];
+  const col=id=>colors[id]||(colors[id]=palette[(ci++)%palette.length]);
+  let cells='';for(let i=0;i<startPad;i++)cells+='<div class="cd pad"></div>';
+  for(let d=1;d<=last.getDate();d++){const ds=`${y}/${String(mo+1).padStart(2,'0')}/${String(d).padStart(2,'0')}`;const items=(byDay[ds]||[]).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+    cells+=`<div class="cd ${ds===todayS?'today':''} ${[0,6].includes(new Date(y,mo,d).getDay())?'we':''}"><div class="dn">${d}</div>${items.slice(0,4).map(r=>`<div class="ev" style="border-left-color:${col(r.vendorId)}" title="${esc(r.company+' '+r.name+' × '+(vmap[r.vendorId]?.company||r.vendorName)+(r.time?' '+r.time:''))}" onclick="openHr('${esc(r.company.trim()+'|'+r.name.trim())}')"><span>${r.time?esc(r.time)+' ':''}${esc(r.name)}</span><small>${esc(vmap[r.vendorId]?.company||r.vendorName)}</small></div>`).join('')}${items.length>4?`<div class="mini">＋${items.length-4}件</div>`:''}</div>`;}
+  const legend=Object.keys(colors).map(id=>`<span class="lg"><i style="background:${colors[id]}"></i>${esc(vmap[id]?.company||id)}</span>`).join('');
+  document.getElementById('m-body').innerHTML=`<div class="calhead"><button class="ghost" onclick="calMonth='${new Date(y,mo-1,1).toISOString().slice(0,7)}';renderMeet()">‹ 前月</button><b>${y}年${mo+1}月</b><button class="ghost" onclick="calMonth='${new Date(y,mo+1,1).toISOString().slice(0,7)}';renderMeet()">翌月 ›</button><button class="ghost" onclick="calMonth=null;renderMeet()">今月</button><span class="mini">${R.filter(r=>(r.date||'').startsWith(`${y}/${String(mo+1).padStart(2,'0')}`)).length}件</span></div>
+    <div class="cal"><div class="cw">日</div><div class="cw">月</div><div class="cw">火</div><div class="cw">水</div><div class="cw">木</div><div class="cw">金</div><div class="cw">土</div>${cells}</div><div class="legend">${legend}</div>`;
 }
 function copyMeetTsv(){const vmap={};A.vendors.forEach(x=>vmap[x.id]=x);const rows=[['商談日','時刻','会社','氏名','ベンダー','サービス','つなぎ状況','商談結果','売上','協力費','メモ']];
   meetRows().sort((a,b)=>dtKey(b).localeCompare(dtKey(a))).forEach(r=>rows.push([r.date,r.time||'',r.company,r.name,vmap[r.vendorId]?.company||r.vendorName,r.vendorName,r.status,r.result||'未確定',r.sales,r.fee,r.memo||'']));
@@ -1014,7 +1074,7 @@ function openVendorEdit(id){
     <div class="grid2">
       <div class="field"><label>サービス名</label>${inp('ve-name',x.name)}</div><div class="field"><label>会社名</label>${inp('ve-company',x.company)}</div>
       <div class="field"><label>カテゴリ</label>${sel('ve-cat',AREAS,x.cat)}</div><div class="field"><label>案件元</label>${sel('ve-src',['自社獲得','DYM'],x.src)}</div>
-      <div class="field"><label>単価</label>${inp('ve-price',x.price,'例：50,000')}</div><div class="field"><label>会いたい役職</label>${inp('ve-role',x.role,'例：人事部長以上')}</div>
+      <div class="field"><label>単価（役職別なら「担当者:30000／課長:40000／部長:50000」）</label>${inp('ve-price',x.price,'例：50000 または 担当者:30000／課長:40000')}</div><div class="field"><label>会いたい役職</label>${inp('ve-role',x.role,'例：人事部長以上')}</div>
     </div>
     <div class="field"><label>一行説明（人事向け）</label>${inp('ve-desc',x.desc)}</div>
     <div class="field"><label>向いている企業</label>${inp('ve-for',x.for)}</div>
@@ -1095,6 +1155,14 @@ function renderNow(rowsAll){
     <div class="c" style="border-color:var(--gold)"><div><b>今月の入金予定（ベンダー）</b><div class="mini">${mIn.replace('-','年')}月の商談分 ・ 期限 ${cyIn?fmtDY(cyIn.vendorDue):'—'}</div></div><div><div class="due">${yen(sum(inc,'sales'))}</div><div class="mini">${inc.length}件 ・ 未入金 ${incOpen.length}件（${yen(sum(incOpen,'sales'))}）</div></div></div>
     <div class="c" style="border-color:var(--gold)"><div><b>今月の支払予定（人事協力費）</b><div class="mini">${mOut.replace('-','年')}月の商談分 ・ 期限 ${cyOut?fmtDY(cyOut.hrDue):'—'}</div></div><div><div class="due">${yen(sum(out.filter(r=>r.payout!=='辞退'),'fee'))}</div><div class="mini">${out.length}件 ・ 未払い ${outOpen.length}件（${yen(sum(outOpen,'fee'))}）</div></div></div>`;
 }
+function copyStatement(kind,key){
+  const rows=(window._batch[kind]||{})[key]||[];if(!rows.length){toast('対象がありません');return;}
+  const vmap={};A.vendors.forEach(x=>vmap[x.id]=x);const m=document.getElementById('s-month').value;const cy=cycleOf(m);const label=m?m.replace('-','年')+'月':'全期間';
+  const sum=(a,f)=>a.reduce((x,r)=>x+(Number(r[f])||0),0);let text;
+  if(kind==='v'){const vd=vmap[key]||{};text=[`${vd.company||rows[0].vendorName} 御中`,'',`人事のチカラ ご請求明細（${label} 商談分）`,`締め日：${cy?fmtDY(cy.close):'—'}　お支払期限：${cy?fmtDY(cy.vendorDue):'—'}`,'',...rows.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map((r,i)=>`${i+1}. ${r.date||'日付未入力'}　${r.company} ${r.name}様　${yen(r.sales)}`),'',`合計 ${rows.length}件　${yen(sum(rows,'sales'))}（税抜）`,'','株式会社BizLabo 人事のチカラ運営'].join('\n');}
+  else{const r0=rows[0];const h=(A.hr||[]).find(x=>x.key===key)||{};const pay=rows.filter(r=>r.payout!=='辞退');text=[`${r0.name} 様（${r0.company}）`,'',`人事のチカラ 協力費お支払明細（${label} 商談分）`,`締め日：${cy?fmtDY(cy.close):'—'}　お支払予定：${cy?fmtDY(cy.hrDue):'—'}${h.payment?'　受取方法：'+h.payment:''}`,'',...pay.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map((r,i)=>`${i+1}. ${r.date||'日付未入力'}　${vmap[r.vendorId]?.company||r.vendorName}　${yen(r.fee)}`),'',`合計 ${pay.length}件　${yen(sum(pay,'fee'))}`,'','株式会社BizLabo 人事のチカラ運営'].join('\n');}
+  navigator.clipboard?.writeText(text).then(()=>toast('明細をコピーしました。LINEやメールに貼り付けてください'),()=>toast('コピーできませんでした'));
+}
 function renderCycle(m,R,vmap){
   const cy=cycleOf(m);const el=document.getElementById('s-cycle');
   if(!cy){el.innerHTML=m===''?'<div class="c" style="grid-column:1/-1"><span class="mini">月を選ぶと、その月の締め日・期限とベンダー別／人事別の一覧が出ます。</span></div>':'';}
@@ -1106,7 +1174,7 @@ function renderCycle(m,R,vmap){
   window._batch.v={};
   document.getElementById('s-byvendor').innerHTML=Object.keys(byV).sort((a,b)=>sum(byV[b].rows,'sales')-sum(byV[a].rows,'sales')).map(k=>{const g=byV[k];window._batch.v[k]=g.rows;const paid=g.rows.filter(r=>r.invoice==='入金済').length,billed=g.rows.filter(r=>r.invoice==='請求済').length;
     return `<tr><td><b>${esc(g.name)}</b></td><td class="num">${g.rows.length}</td><td class="num">${yen(sum(g.rows,'sales'))}</td><td class="mini">${paid===g.rows.length?'<span class="tag" style="background:var(--ok-soft);color:var(--ok)">入金済</span>':`入金済 ${paid} ／ 請求済 ${billed} ／ 未請求 ${g.rows.length-paid-billed}`}</td>
-      <td><select class="st" onchange="bulkFromBatch('v','${esc(k)}','invoice',this.value)"><option value="" selected>選択…</option>${INVOICE.map(o=>`<option>${o}</option>`).join('')}</select></td></tr>`;}).join('')||'<tr><td colspan="5" class="mini" style="padding:14px;text-align:center">—</td></tr>';
+      <td><select class="st" onchange="bulkFromBatch('v','${esc(k)}','invoice',this.value)"><option value="" selected>選択…</option>${INVOICE.map(o=>`<option>${o}</option>`).join('')}</select></td><td><button class="ghost" style="padding:5px 10px" onclick="copyStatement('v','${esc(k)}')">請求明細</button></td></tr>`;}).join('')||'<tr><td colspan="6" class="mini" style="padding:14px;text-align:center">—</td></tr>';
   const hrmap={};(A.hr||[]).forEach(h=>hrmap[h.key]=h);
   // 紹介者別：商談報酬 = 当月着座 × 3,000（refFee列）、紹介報酬 = 当月が初回着座の紹介人事 × 10,000
   const allSeated=seated();const firstMonth={};allSeated.forEach(r=>{const k=r.company.trim()+'|'+r.name.trim();const mo=monthOf(r.date);if(mo==='日付不明')return;if(!firstMonth[k]||mo<firstMonth[k])firstMonth[k]=mo;});
@@ -1118,7 +1186,7 @@ function renderCycle(m,R,vmap){
   window._batch.h={};
   document.getElementById('s-byhr').innerHTML=Object.keys(byH).map(k=>{const g=byH[k];window._batch.h[k]=g.rows;const h=hrmap[k]||{};const paid=g.rows.filter(r=>r.payout==='支払済').length,dec=g.rows.filter(r=>r.payout==='辞退').length;const amt=g.rows.filter(r=>r.payout!=='辞退').reduce((x,r)=>x+(Number(r.fee)||0),0);
     return {html:`<tr><td><b>${mark(g.r.company,g.r.name)}${esc(g.r.name)}</b><div class="mini">${esc(g.r.company)}</div></td><td class="num">${yen(amt)}</td><td class="mini">${esc(h.payment||'未設定')}</td><td class="mini">${paid+dec===g.rows.length?'<span class="tag" style="background:var(--ok-soft);color:var(--ok)">完了</span>':`未払い ${g.rows.length-paid-dec}`}</td>
-      <td><select class="st ${paid===g.rows.length?'s2':''}" onchange="bulkFromBatch('h','${esc(k)}','payout',this.value)"><option value="" selected>選択…</option>${PAYOUT.map(o=>`<option>${o}</option>`).join('')}</select></td></tr>`.replace('</b><div class="mini">'+esc(g.r.company)+'</div></td>','</b><div class="mini">'+esc(g.r.company)+'</div></td><td class="num">'+g.rows.length+'</td>'),amt};}).sort((a,b)=>b.amt-a.amt).map(x=>x.html).join('')||'<tr><td colspan="6" class="mini" style="padding:14px;text-align:center">—</td></tr>';
+      <td><select class="st ${paid===g.rows.length?'s2':''}" onchange="bulkFromBatch('h','${esc(k)}','payout',this.value)"><option value="" selected>選択…</option>${PAYOUT.map(o=>`<option>${o}</option>`).join('')}</select></td><td><button class="ghost" style="padding:5px 10px" onclick="copyStatement('h','${esc(k)}')">支払明細</button></td></tr>`.replace('</b><div class="mini">'+esc(g.r.company)+'</div></td>','</b><div class="mini">'+esc(g.r.company)+'</div></td><td class="num">'+g.rows.length+'</td>'),amt};}).sort((a,b)=>b.amt-a.amt).map(x=>x.html).join('')||'<tr><td colspan="7" class="mini" style="padding:14px;text-align:center">—</td></tr>';
 }
 async function bulkSet(rows,field,value){
   rows.forEach(r=>r[field]=value);renderSales();renderMeet();renderHr();
@@ -1129,7 +1197,7 @@ window._batch={};
 function bulkFromBatch(kind,key,field,value){const rows=(window._batch[kind]||{})[key]||[];if(!rows.length)return;if(!confirm(`${rows.length}件をまとめて「${value}」に変更します。よろしいですか？`)){renderSales();return;}bulkSet(rows,field,value);}
 async function saveResp(id,vendorId,field,value){const r=A.responses.find(x=>x.id===id&&x.vendorId===vendorId);if(!r)return;
   const val=(field==='sales'||field==='fee'||field==='refFee')?(value===''?'':Number(value)):value;if(r[field]===val)return;r[field]=val;
-  if(field==='result'&&value==='承認'&&(r.sales===''||r.sales==null)){const vd=A.vendors.find(x=>x.id===vendorId);const p=Number(String(vd?.price||'').replace(/[^\d]/g,''));if(p){r.sales=p;api('update_response',{token,id,vendorId,fields:{sales:p}}).catch(()=>{});}}
+  if(field==='result'&&value==='承認'&&(r.sales===''||r.sales==null)){const vd=A.vendors.find(x=>x.id===vendorId);const p=priceFor(vd?.price,r.role);if(p){r.sales=p;api('update_response',{token,id,vendorId,fields:{sales:p}}).catch(()=>{});}}
   renderSales();renderMeet();
   try{await api('update_response',{token,id,vendorId,fields:{[field]:val}});store.set('jc_admin',{tok:token,d:A,t:Date.now()});toast('保存しました');}catch(e){toast('保存できませんでした：'+e.message);}}
 function copyHrTsv(){const rows=[['会社','規模','氏名','役職','関心領域','つなぎ済み企業','協力費累計','受取方法','連絡先','メモ']];
@@ -1142,7 +1210,7 @@ function copySalesTsv(){const rows=[['商談日','会社','氏名','ベンダー
 const selLeads=new Set();
 function toggleLead(id,vid,on){const k=id+'|'+vid;on?selLeads.add(k):selLeads.delete(k);const bar=document.getElementById('lead-bulk');bar.hidden=selLeads.size===0;document.getElementById('lead-sel-n').textContent=selLeads.size+'件選択中';document.querySelectorAll('.grow').forEach(g=>{const c=g.querySelector('input[type=checkbox]');if(c)g.classList.toggle('sel',c.checked);});}
 async function bulkLeads(status){if(!status||!selLeads.size)return;const rows=A.responses.filter(r=>selLeads.has(r.id+'|'+r.vendorId));if(!confirm(`${rows.length}件を「${status}」にします。よろしいですか？`))return;
-  rows.forEach(r=>{r.status=status;if(status==='着座済み'){const vd=A.vendors.find(x=>x.id===r.vendorId);if(!r.date)r.date=new Date().toISOString().slice(0,10).replace(/-/g,'/');if(r.sales===''||r.sales==null){const p=Number(String(vd?.price||'').replace(/[^\d]/g,''));if(p)r.sales=p;}if(r.fee===''||r.fee==null)r.fee=5000;r.invoice=r.invoice||'未請求';r.payout=r.payout||'未払い';r.survey=r.survey||'未提出';r.result=r.result||'未確定';}});
+  rows.forEach(r=>{r.status=status;if(status==='着座済み'){const vd=A.vendors.find(x=>x.id===r.vendorId);if(!r.date)r.date=new Date().toISOString().slice(0,10).replace(/-/g,'/');if(r.sales===''||r.sales==null){const p=priceFor(vd?.price,r.role);if(p)r.sales=p;}if(r.fee===''||r.fee==null)r.fee=5000;r.invoice=r.invoice||'未請求';r.payout=r.payout||'未払い';r.survey=r.survey||'未提出';r.result=r.result||'未確定';}});
   selLeads.clear();renderAdmin();
   try{for(const r of rows){await api('update_response',{token,id:r.id,vendorId:r.vendorId,fields:{status}});}store.set('jc_admin',{tok:token,d:A,t:Date.now()});toast(`${rows.length}件を「${status}」にしました`);}catch(e){toast('保存できませんでした：'+e.message);loadAdmin();}}
 function globalSearch(q){const box=document.getElementById('g-results');q=(q||'').trim();if(!q){box.hidden=true;return;}
@@ -1151,6 +1219,17 @@ function globalSearch(q){const box=document.getElementById('g-results');q=(q||''
   A.vendors.filter(v=>((v.company||'')+v.name).includes(q)).slice(0,6).forEach(v=>out.push(`<button onclick="document.getElementById('g-results').hidden=true;openVendorStats('${v.id}')"><span class="k">ベンダー</span>${v.logo?`<img class="vlogo" src="${esc(v.logo)}" alt="" onerror="this.remove()">`:''}<span>${esc(v.company||v.name)}</span><span class="mini">${esc(v.name)}</span></button>`));
   box.innerHTML=out.join('')||'<button disabled><span class="mini">該当なし</span></button>';box.hidden=false;}
 document.addEventListener('click',e=>{if(!e.target.closest('.home-search'))(document.getElementById('g-results')||{}).hidden=true;});
+function renderSettings(){
+  const st=A.settings||{};const g=id=>document.getElementById(id);
+  if(g('st-mail'))g('st-mail').value=st.notifyEmail||'';if(g('st-lineto'))g('st-lineto').value=st.lineTo||'';if(g('st-hour'))g('st-hour').value=String(st.remindHour||'8');
+  if(g('st-gseats'))g('st-gseats').value=st.goalSeats||'';if(g('st-gsales'))g('st-gsales').value=st.goalSales||'';
+  if(g('st-token-state'))g('st-token-state').textContent=st.lineTokenSet?'トークン設定済み（変更する場合のみ入力）':'未設定';
+  if(g('st-trig'))g('st-trig').textContent=st.triggers>0?`毎朝のリマインド：有効（${st.remindHour||8}:00 JST）`:(st.triggers<0?'通知の権限がまだ許可されていません。Apps Scriptのエディタで setupTriggers を一度実行して権限を許可してください。':'毎朝のリマインド：まだ有効になっていません。「有効化」を押してください。');
+  const lg=A.log||[];if(g('log-rows'))g('log-rows').innerHTML=lg.length?lg.map(l=>`<tr><td class="mini">${esc(l.at)}</td><td>${esc(l.by||'—')}</td><td class="mini">${esc(l.action)}</td><td class="mini">${esc(l.target)}</td><td class="mini">${esc(String(l.detail||'').slice(0,80))}</td></tr>`).join(''):'<tr><td colspan="5" class="mini" style="padding:14px;text-align:center">まだ操作ログはありません。</td></tr>';
+}
+async function saveSettingsUI(){const g=id=>(document.getElementById(id)||{}).value||'';const settings={notifyEmail:g('st-mail'),lineTo:g('st-lineto'),remindHour:g('st-hour'),goalSeats:g('st-gseats').replace(/[^\d]/g,''),goalSales:g('st-gsales').replace(/[^\d]/g,'')};if(g('st-token'))settings.lineToken=g('st-token');
+  try{const j=await api('save_settings',{token,settings});A.settings=j.settings;document.getElementById('st-token').value='';renderSettings();renderHome();toast('保存しました');}catch(e){toast('保存できませんでした：'+e.message);}}
+async function act2(action,msg){try{const j=await api(action,{token});toast(msg+(j.sent?'（'+(j.sent.length?j.sent.join('・'):'送信先が未設定')+'）':''));if(action==='setup_triggers'){A.settings=A.settings||{};A.settings.triggers=j.triggers;renderSettings();}}catch(e){toast('失敗：'+e.message);}}
 function renderHome(){
   const vmap={};A.vendors.forEach(x=>vmap[x.id]=x);const todayS=new Date().toISOString().slice(0,10).replace(/-/g,'/');const tm=thisMonth();
   const L=leads();const un=L.filter(x=>(x.status||'未対応')==='未対応').length,pl=L.filter(x=>x.status==='日程調整中').length;
@@ -1160,7 +1239,8 @@ function renderHome(){
   const overInv=approved().filter(r=>{const cy=cycleOf(monthOf(r.date));return cy&&isOver(cy.vendorDue)&&(r.invoice||'未請求')!=='入金済';}).length;
   const overPay=seated().filter(r=>{const cy=cycleOf(monthOf(r.date));return cy&&isOver(cy.hrDue)&&(r.payout||'未払い')==='未払い';}).length;
   const noDate=A.responses.filter(r=>r.status==='日程調整中'&&!r.date).length;
-  document.getElementById('home-kpis').innerHTML=[['今月の着座',seatedM.length,'件（承認 '+cashM.length+'）'],['今月の確定売上',yen(sum(cashM,'sales')),'承認待ち '+yen(sum(seatedM.filter(r=>(r.result||'未確定')==='未確定'),'sales'))],['つなぎ待ち',un,'件（未対応）'],['登録人事',new Set(A.responses.map(x=>x.company.trim()+'|'+x.name.trim()).concat((A.hr||[]).map(h=>h.key))).size,'名']]
+  const gS=Number((A.settings||{}).goalSeats)||0,gY=Number((A.settings||{}).goalSales)||0;const prog=(v,g)=>g?`<div class="bar" style="margin-top:6px"><i style="width:${Math.min(100,Math.round(v/g*100))}%;background:${v>=g?'var(--ok)':'var(--gold)'}"></i></div><div class="sub">目標 ${typeof g==='number'&&g>=1000?yen(g):g} ・ 達成率 ${Math.round(v/g*100)}%</div>`:'';
+  document.getElementById('home-kpis').innerHTML=[['今月の着座',seatedM.length,'件（承認 '+cashM.length+'）'+prog(seatedM.length,gS)],['今月の確定売上',yen(sum(cashM,'sales')),'承認待ち '+yen(sum(seatedM.filter(r=>(r.result||'未確定')==='未確定'),'sales'))+prog(sum(cashM,'sales'),gY)],['つなぎ待ち',un,'件（未対応）'],['登録人事',new Set(A.responses.map(x=>x.company.trim()+'|'+x.name.trim()).concat((A.hr||[]).map(h=>h.key))).size,'名']]
     .map(([t,n,s])=>`<div class="kpi"><small>${t}</small><b>${n}</b><div class="sub">${s}</div></div>`).join('');
   const todo=[['未対応のつなぎ',un,"setTab('leads');leadFilter='未対応';renderAdmin()",false],['日程調整中（商談日未入力）',noDate,"setTab('meet');meetStage='plan';renderAdmin()",noDate>0],['承認待ちの商談',pend,"setTab('meet');meetStage='pending';renderAdmin()",false],['入金期限を過ぎた請求',overInv,"setTab('sales');salesSub('rows');renderAdmin()",overInv>0],['支払期限を過ぎた協力費',overPay,"setTab('sales');salesSub('batch');renderAdmin()",overPay>0],['ベンダー掲載申し込み',A.pending.length,"setTab('leads');renderAdmin()",false]];
   document.getElementById('home-todo').innerHTML=todo.map(([l,n,act,al])=>`<div class="todo ${al?'alert':''}" onclick="${act}"><span>${l}</span><b>${n}</b></div>`).join('');
@@ -1225,11 +1305,11 @@ function renderAdmin(){
     <div class="mini">${esc(x.company)} ・ ${esc(x.cat)} ・ ${esc(x.src)}${x.price?' ・ 単価 '+esc(x.price):''}${x.role?' ・ '+esc(x.role):''}</div><div>${esc(x.desc)}</div><div class="mini">向け：${esc(x.for)}</div>${x.cond?`<div class="mini cond">運営メモ：${esc(x.cond)}</div>`:''}<div class="mini">${x.detail?'詳細説明あり（'+x.detail.length+'字）':'<span style="color:#A32D1E">詳細説明なし</span>'}</div></div>`).join('');
   document.getElementById('vcount').textContent=`${A.vendors.length}社（掲載中 ${A.vendors.filter(x=>x.published).length} ・ DYM ${A.vendors.filter(x=>x.src==='DYM').length}）`;
   const ac=document.getElementById('a-cat');if(!ac.options.length)AREAS.forEach(a=>{const o=document.createElement('option');o.textContent=a;ac.appendChild(o);});
-  renderPropose();renderHr();renderSales();renderMeet();renderHome();
+  renderPropose();renderHr();renderSales();renderMeet();renderHome();renderSettings();
   try{const t=sessionStorage.getItem('jc_tab');if(t&&t!==curTab)setTab(t);const ss=sessionStorage.getItem('jc_ssub');if(ss)salesSub(ss);}catch(e){}
 }
 async function setStatus(id,vendorId,status,sel){
-  const r=A.responses.find(x=>x.id===id&&x.vendorId===vendorId);if(r){r.status=status;if(status==='着座済み'){const vd=A.vendors.find(x=>x.id===vendorId);if(!r.date)r.date=new Date().toISOString().slice(0,10).replace(/-/g,'/');if(r.sales===''||r.sales==null){const p=Number(String(vd?.price||'').replace(/[^\d]/g,''));if(p)r.sales=p;}if(r.fee===''||r.fee==null)r.fee=5000;{const hh=(A.hr||[]).find(x=>x.key===r.company.trim()+'|'+r.name.trim());if(hh&&hh.referrer&&(r.refFee===''||r.refFee==null))r.refFee=REFERRER_FEE;}r.invoice=r.invoice||'未請求';r.payout=r.payout||'未払い';r.survey=r.survey||'未提出';r.result=r.result||'未確定';}}sel.className='st s'+STATUS.indexOf(status);renderSales();renderHr();setTimeout(renderAdmin,350);
+  const r=A.responses.find(x=>x.id===id&&x.vendorId===vendorId);if(r){r.status=status;if(status==='着座済み'){const vd=A.vendors.find(x=>x.id===vendorId);if(!r.date)r.date=new Date().toISOString().slice(0,10).replace(/-/g,'/');if(r.sales===''||r.sales==null){const p=priceFor(vd?.price,r.role);if(p)r.sales=p;}if(r.fee===''||r.fee==null)r.fee=5000;{const hh=(A.hr||[]).find(x=>x.key===r.company.trim()+'|'+r.name.trim());if(hh&&hh.referrer&&(r.refFee===''||r.refFee==null))r.refFee=REFERRER_FEE;}r.invoice=r.invoice||'未請求';r.payout=r.payout||'未払い';r.survey=r.survey||'未提出';r.result=r.result||'未確定';}}sel.className='st s'+STATUS.indexOf(status);renderSales();renderHr();setTimeout(renderAdmin,350);
   try{await api('status',{token,id,vendorId,status});store.set('jc_admin',{tok:token,d:A,t:Date.now()});toast('保存しました');}
   catch(e){toast('保存できませんでした：'+e.message);loadAdmin();}
 }
