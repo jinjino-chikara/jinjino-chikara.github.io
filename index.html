@@ -639,7 +639,8 @@ const STATUS=["未対応","日程調整中","着座済み","見送り"];
 const RESULT_AFTER=['承認','非承認'],RESULT_BEFORE=['リスケ','ベンダーNG','その他'];const RESULTS=['未確定',...RESULT_AFTER,...RESULT_BEFORE];
 function priceFor(priceStr,role){const str=String(priceStr||'');const pairs=str.split(/[／,、\n]/).map(x=>x.split(/[:：]/)).filter(p=>p.length===2);if(pairs.length){role=String(role||'');let hit=pairs.find(p=>role.indexOf(p[0].trim())>=0);if(!hit)hit=pairs.find(p=>/担当|全/.test(p[0]))||pairs[0];return Number(hit[1].replace(/[^\d]/g,''))||0;}return Number(str.replace(/[^\d]/g,''))||0;}
 function isCash(r){return r.status==='着座済み'&&r.result==='承認';}
-function resultSelect(r,extraClass){const cur=r.result||'未確定';return `<select class="cell st rs-${RESULTS.indexOf(cur)} ${extraClass||''}" onchange="saveResp('${r.id}','${r.vendorId}','result',this.value)"><option ${cur==='未確定'?'selected':''}>未確定</option><optgroup label="商談後">${RESULT_AFTER.map(o=>`<option ${o===cur?'selected':''}>${o}</option>`).join('')}</optgroup><optgroup label="商談前">${RESULT_BEFORE.map(o=>`<option ${o===cur?'selected':''}>${o}</option>`).join('')}</optgroup></select>`;}
+function resultOptions(cur){return `<option value="未確定" ${cur==='未確定'?'selected':''}>未確定</option>${RESULT_AFTER.map(o=>`<option value="${o}" ${o===cur?'selected':''}>商談後：${o}</option>`).join('')}${RESULT_BEFORE.map(o=>`<option value="${o}" ${o===cur?'selected':''}>商談前：${o}</option>`).join('')}`;}
+function resultSelect(r,extraClass){const cur=r.result||'未確定';return `<select class="cell st rs-${RESULTS.indexOf(cur)} ${extraClass||''}" onchange="saveResp('${r.id}','${r.vendorId}','result',this.value)">${resultOptions(cur)}</select>`;}
 const INVOICE=["未請求","請求済","入金済"],PAYOUT=["未払い","支払済","辞退"],SURVEY=["未提出","提出済"],PAYMENT=["","個人口座","法人口座","辞退"];
 let curTab='home';let leadFilter='未対応';
 const REFERRER_FEE=3000,REFERRAL_BONUS=10000;
@@ -1028,7 +1029,7 @@ function meetingForm(prefill){
     <div class="row"><div class="field" style="margin-top:0"><label>ベンダー</label><select id="mf-vendor">${vs.map(v=>`<option value="${v.id}">${esc(v.company||v.name)}（${esc(v.name)}）${v.published?'':' ※非掲載'}</option>`).join('')}</select></div>
       <div class="field" style="margin-top:0"><label>つなぎ状況</label><select id="mf-status"><option>日程調整中</option><option>着座済み</option><option>未対応</option><option>見送り</option></select></div></div>
     <div class="row"><div class="field" style="margin-top:0"><label>商談日</label><input type="date" id="mf-date"></div><div class="field" style="margin-top:0"><label>時刻</label><input type="time" id="mf-time"></div></div>
-    <div class="row"><div class="field" style="margin-top:0"><label>商談結果</label><select id="mf-result"><option value="">未確定</option><optgroup label="商談後">${RESULT_AFTER.map(o=>`<option>${o}</option>`).join('')}</optgroup><optgroup label="商談前">${RESULT_BEFORE.map(o=>`<option>${o}</option>`).join('')}</optgroup></select></div>
+    <div class="row"><div class="field" style="margin-top:0"><label>商談結果</label><select id="mf-result"><option value="">未確定</option>${RESULT_AFTER.map(o=>`<option value="${o}">商談後：${o}</option>`).join('')}${RESULT_BEFORE.map(o=>`<option value="${o}">商談前：${o}</option>`).join('')}</select></div>
       <div class="field" style="margin-top:0"><label>売上（空欄ならベンダー単価）</label><input id="mf-sales" inputmode="numeric" placeholder="例：30000"></div></div>
     <div class="row"><div class="field" style="margin-top:0"><label>協力費（空欄なら5,000）</label><input id="mf-fee" inputmode="numeric" placeholder="5000"></div><div class="field" style="margin-top:0"><label>メモ</label><input id="mf-memo" placeholder="任意"></div></div>
     <button class="primary" style="margin-top:4px" onclick="submitMeeting('${esc(prefill.key||'')}')">商談を登録</button>
