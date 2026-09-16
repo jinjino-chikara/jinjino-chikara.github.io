@@ -639,6 +639,9 @@ const RATE_LABEL={3:"ぜひ聞きたい",2:"少し聞いてみたい",1:"今は�
 const RATE_CLASS={3:"hot",2:"warm",1:"cold"};
 const STATUS=["未対応","日程調整中","着座済み","見送り"];
 const RESULT_AFTER=['承認','非承認'],RESULT_BEFORE=['リスケ','ベンダーNG','その他'];const RESULTS=['未確定',...RESULT_AFTER,...RESULT_BEFORE];
+function pricePatterns(priceStr){return String(priceStr||'').split(/[／,、\n]/).map(x=>x.split(/[:：]/)).filter(p=>p.length===2).map(p=>({label:p[0].trim(),amount:Number(p[1].replace(/[^\d]/g,''))||0})).filter(p=>p.amount);}
+function priceSelect(r,vmap){const pats=pricePatterns((vmap[r.vendorId]||{}).price);if(!pats.length)return '';return `<select class="cell st" title="金額パターン" onchange="if(this.value){saveResp('${r.id}','${r.vendorId}','sales',this.value);}"><option value="">パターン…</option>${pats.map(p=>`<option value="${p.amount}" ${Number(r.sales)===p.amount?'selected':''}>${esc(p.label)} ${yen(p.amount)}</option>`).join('')}</select>`;}
+function feeSelect(r,vmap){const pats=pricePatterns((vmap[r.vendorId]||{}).fee);if(!pats.length)return '';return `<select class="cell st" title="協力費パターン" onchange="if(this.value){saveResp('${r.id}','${r.vendorId}','fee',this.value);}"><option value="">パターン…</option>${pats.map(p=>`<option value="${p.amount}" ${Number(r.fee)===p.amount?'selected':''}>${esc(p.label)} ${yen(p.amount)}</option>`).join('')}</select>`;}
 function priceFor(priceStr,role){const str=String(priceStr||'');const pairs=str.split(/[／,、\n]/).map(x=>x.split(/[:：]/)).filter(p=>p.length===2);if(pairs.length){role=String(role||'');let hit=pairs.find(p=>role.indexOf(p[0].trim())>=0);if(!hit)hit=pairs.find(p=>/担当|全/.test(p[0]))||pairs[0];return Number(hit[1].replace(/[^\d]/g,''))||0;}return Number(str.replace(/[^\d]/g,''))||0;}
 function isCash(r){return r.status==='着座済み'&&r.result==='承認';}
 function resultOptions(cur){return `<option value="未確定" ${cur==='未確定'?'selected':''}>未確定</option>${RESULT_AFTER.map(o=>`<option value="${o}" ${o===cur?'selected':''}>商談後：${o}</option>`).join('')}${RESULT_BEFORE.map(o=>`<option value="${o}" ${o===cur?'selected':''}>商談前：${o}</option>`).join('')}`;}
@@ -900,16 +903,17 @@ function renderMeet(){
     ${meetView==='list'?`<td><div class="vn-logo">${vmap[r.vendorId]?.logo?`<img class="vlogo" src="${esc(vmap[r.vendorId].logo)}" alt="" loading="lazy" onerror="this.remove()">`:''}<div>${esc(vmap[r.vendorId]?.company||r.vendorName)}<div class="mini">${esc(r.vendorName)}</div></div></div></td>`:''}
     <td><select class="st s${Math.max(0,STATUS.indexOf(r.status||'未対応'))}" onchange="setStatus('${r.id}','${r.vendorId}',this.value,this)">${STATUS.map(st=>`<option ${st===(r.status||'未対応')?'selected':''}>${st}</option>`).join('')}</select></td>
     <td>${resultSelect(r)}</td>
-    <td class="num">${isCash(r)?'<span class="pos">'+yen(r.sales)+'</span>':(r.status==='着座済み'&&(r.result||'未確定')==='未確定'?'<span class="mini">承認待ち '+yen(r.sales)+'</span>':'<span class="mini">—</span>')}</td>
+    <td>${r.status==='着座済み'?`<div style="display:flex;flex-direction:column;gap:4px"><input class="cell num ${isCash(r)?'pos':''}" inputmode="numeric" value="${r.sales===''||r.sales==null?'':r.sales}" placeholder="売上" onblur="saveResp('${r.id}','${r.vendorId}','sales',this.value.replace(/[^\d]/g,''))">${priceSelect(r,vmap)}${isCash(r)?'':'<span class="mini">'+((r.result||'未確定')==='未確定'?'承認待ち':'対象外')+'</span>'}</div>`:'<span class="mini">—</span>'}</td>
+    <td>${r.status==='着座済み'?`<div style="display:flex;flex-direction:column;gap:4px"><input class="cell num" inputmode="numeric" value="${r.fee===''||r.fee==null?'':r.fee}" placeholder="協力費" onblur="saveResp('${r.id}','${r.vendorId}','fee',this.value.replace(/[^\d]/g,''))">${feeSelect(r,vmap)}</div>`:'<span class="mini">—</span>'}</td>
     <td>${r.status==='着座済み'?`<select class="cell st ${r.invoice==='入金済'?'s2':r.invoice==='請求済'?'s1':''}" onchange="saveResp('${r.id}','${r.vendorId}','invoice',this.value)">${INVOICE.map(o=>`<option ${o===(r.invoice||'未請求')?'selected':''}>${o}</option>`).join('')}</select>`:'<span class="mini">—</span>'}</td>
     <td>${r.status==='着座済み'?`<select class="cell st ${r.payout==='支払済'?'s2':''}" onchange="saveResp('${r.id}','${r.vendorId}','payout',this.value)">${PAYOUT.map(o=>`<option ${o===(r.payout||'未払い')?'selected':''}>${o}</option>`).join('')}</select>`:'<span class="mini">—</span>'}</td>
     <td><input class="cell wide" value="${esc(r.memo||'')}" placeholder="メモ" onblur="saveResp('${r.id}','${r.vendorId}','memo',this.value)"></td>
   </tr>`;};
-  const head=(withVendor)=>`<thead><tr><th>商談日時</th><th>人事</th>${withVendor?'<th>ベンダー</th>':''}<th>つなぎ状況</th><th>商談結果</th><th>売上</th><th>ベンダー請求</th><th>人事支払</th><th>メモ</th></tr></thead>`;
+  const head=(withVendor)=>`<thead><tr><th>商談日時</th><th>人事</th>${withVendor?'<th>ベンダー</th>':''}<th>つなぎ状況</th><th>商談結果</th><th>売上</th><th>協力費</th><th>ベンダー請求</th><th>人事支払</th><th>メモ</th></tr></thead>`;
   const body=document.getElementById('m-body');
   if(!R.length&&meetView!=='cal'){body.innerHTML='<div class="empty">該当する商談がありません。</div>';return;}
   if(meetView==='cal'){renderCal(R,vmap);return;}
-  if(meetView==='list'){body.innerHTML=`<div class="tablewrap"><table style="min-width:1180px">${head(true)}<tbody>${page('m',R).map(row).join('')}</tbody></table></div>`;return;}
+  if(meetView==='list'){body.innerHTML=`<div class="tablewrap"><table style="min-width:1300px">${head(true)}<tbody>${page('m',R).map(row).join('')}</tbody></table></div>`;return;}
   const byV={};R.forEach(r=>{(byV[r.vendorId]=byV[r.vendorId]||[]).push(r);});
   body.innerHTML=Object.keys(byV).sort((a,b)=>byV[b].length-byV[a].length).map(id=>{const rs=byV[id];const vd=vmap[id]||{};const next=rs.filter(r=>(r.date||'')>=todayS).sort((a,b)=>dtKey(a).localeCompare(dtKey(b)))[0];
     return `<div class="mv"><div class="mv-head">${vd.logo?`<img class="vlogo" src="${esc(vd.logo)}" alt="" onerror="this.remove()">`:''}<b>${esc(vd.company||rs[0].vendorName)}</b><span class="mini">${esc(rs[0].vendorName)}</span><span class="mini">${rs.length}件 ・ 承認 ${rs.filter(isCash).length} ・ 承認待ち ${rs.filter(r=>r.status==='着座済み'&&(r.result||'未確定')==='未確定').length}${next?' ・ 次回 '+esc(next.date)+(next.time?' '+esc(next.time):''):''}</span></div>
@@ -1037,7 +1041,7 @@ function meetingForm(prefill){
     <div class="row"><div class="field" style="margin-top:0"><label>商談日</label><input type="date" id="mf-date"></div><div class="field" style="margin-top:0"><label>時刻</label><input type="time" id="mf-time"></div></div>
     <div class="row"><div class="field" style="margin-top:0"><label>商談結果</label><select id="mf-result"><option value="">未確定</option>${RESULT_AFTER.map(o=>`<option value="${o}">商談後：${o}</option>`).join('')}${RESULT_BEFORE.map(o=>`<option value="${o}">商談前：${o}</option>`).join('')}</select></div>
       <div class="field" style="margin-top:0"><label>売上（空欄ならベンダー単価）</label><input id="mf-sales" inputmode="numeric" placeholder="例：30000"></div></div>
-    <div class="row"><div class="field" style="margin-top:0"><label>協力費（空欄なら5,000）</label><input id="mf-fee" inputmode="numeric" placeholder="5000"></div><div class="field" style="margin-top:0"><label>メモ</label><input id="mf-memo" placeholder="任意"></div></div>
+    <div class="row"><div class="field" style="margin-top:0"><label>協力費（空欄ならベンダー設定または5,000）</label><input id="mf-fee" inputmode="numeric" placeholder="5000"></div><div class="field" style="margin-top:0"><label>メモ</label><input id="mf-memo" placeholder="任意"></div></div>
     <button class="primary" style="margin-top:4px" onclick="submitMeeting('${esc(prefill.key||'')}')">商談を登録</button>
   </div>`;
 }
@@ -1060,13 +1064,14 @@ function openHr(key){
       <div class="mini">協力費累計 ${h.fee?yen(h.fee):'—'}</div></div>
     <div class="tabs" style="margin-top:8px"><button role="tab" aria-selected="true" onclick="hrSub(this,'hr-p-meet')">つないだ企業（${h.rs.length}）</button><button role="tab" aria-selected="false" onclick="hrSub(this,'hr-p-edit')">情報を編集</button></div>
     <div id="hr-p-meet">
-      ${h.rs.length?`<div class="tablewrap" style="margin-top:10px"><table style="min-width:640px"><thead><tr><th>企業</th><th>興味度</th><th>状況</th><th>商談日時</th><th>結果</th><th>協力費支払</th><th></th></tr></thead><tbody>${h.rs.slice().sort((a,b)=>dtKey(b).localeCompare(dtKey(a))).map(r=>`<tr>
+      ${h.rs.length?`<div class="tablewrap" style="margin-top:10px"><table style="min-width:640px"><thead><tr><th>企業</th><th>興味度</th><th>状況</th><th>商談日時</th><th>結果</th><th>売上</th><th>協力費支払</th><th></th></tr></thead><tbody>${h.rs.slice().sort((a,b)=>dtKey(b).localeCompare(dtKey(a))).map(r=>`<tr>
         <td><div class="vn-logo">${(vmap[r.vendorId]||{}).logo?`<img class="vlogo" src="${esc(vmap[r.vendorId].logo)}" alt="" loading="lazy" onerror="this.remove()">`:''}<div><b>${esc((vmap[r.vendorId]||{}).company||r.vendorName)}</b><div class="mini">${esc(r.vendorName)}</div></div></div></td>
         <td><span class="tag ${RATE_CLASS[r.rate]||'cold'}">${RATE_LABEL[r.rate]||'—'}</span></td>
         <td><select class="st s${Math.max(0,STATUS.indexOf(r.status||'未対応'))}" onchange="setStatus('${r.id}','${r.vendorId}',this.value,this)">${STATUS.map(st=>`<option ${st===(r.status||'未対応')?'selected':''}>${st}</option>`).join('')}</select></td>
         <td><div style="display:flex;gap:4px"><input type="date" class="cell" value="${esc((r.date||'').slice(0,10).replace(/\//g,'-'))}" onchange="saveResp('${r.id}','${r.vendorId}','date',this.value.replace(/-/g,'/'))"><input type="time" class="cell time" value="${esc(r.time||'')}" onchange="saveResp('${r.id}','${r.vendorId}','time',this.value)"></div></td>
         <td>${(r.status==='着座済み'||r.status==='日程調整中')?resultSelect(r):'<span class="mini">—</span>'}</td>
-        <td>${r.status==='着座済み'?`<select class="cell st ${r.payout==='支払済'?'s2':''}" onchange="saveResp('${r.id}','${r.vendorId}','payout',this.value)">${PAYOUT.map(o=>`<option ${o===(r.payout||'未払い')?'selected':''}>${o}</option>`).join('')}</select><div class="mini">${r.fee!==''&&r.fee!=null?yen(r.fee):''}</div>`:'<span class="mini">—</span>'}</td>
+        <td>${r.status==='着座済み'?`<div style="display:flex;flex-direction:column;gap:4px"><input class="cell num" inputmode="numeric" value="${r.sales===''||r.sales==null?'':r.sales}" placeholder="売上" onblur="saveResp('${r.id}','${r.vendorId}','sales',this.value.replace(/[^\d]/g,''))">${priceSelect(r,vmap)}</div>`:'<span class="mini">—</span>'}</td>
+        <td>${r.status==='着座済み'?`<select class="cell st ${r.payout==='支払済'?'s2':''}" onchange="saveResp('${r.id}','${r.vendorId}','payout',this.value)">${PAYOUT.map(o=>`<option ${o===(r.payout||'未払い')?'selected':''}>${o}</option>`).join('')}</select><input class="cell num" style="margin-top:4px" inputmode="numeric" value="${r.fee===''||r.fee==null?'':r.fee}" placeholder="協力費" onblur="saveResp('${r.id}','${r.vendorId}','fee',this.value.replace(/[^\d]/g,''))">${feeSelect(r,vmap)}`:'<span class="mini">—</span>'}</td>
         <td><button class="del" title="削除" onclick="deleteMeeting('${r.id}','${r.vendorId}')">削除</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="mini" style="margin-top:10px">まだ企業をつないでいません。</div>'}
       ${meetingForm({key})}
       <div style="margin-top:10px"><button class="ghost" onclick="closeHr();setTab('leads');leadFilter='すべて';document.getElementById('lead-q').value='${esc(h.name)}';renderAdmin()">つなぎタブで開く</button></div>
@@ -1081,8 +1086,9 @@ function openVendorEdit(id){
     <div class="grid2">
       <div class="field"><label>サービス名</label>${inp('ve-name',x.name)}</div><div class="field"><label>会社名</label>${inp('ve-company',x.company)}</div>
       <div class="field"><label>カテゴリ</label>${sel('ve-cat',AREAS,x.cat)}</div><div class="field"><label>案件元</label>${sel('ve-src',['自社獲得','DYM'],x.src)}</div>
-      <div class="field"><label>単価（役職別なら「担当者:30000／課長:40000／部長:50000」）</label>${inp('ve-price',x.price,'例：50000 または 担当者:30000／課長:40000')}</div><div class="field"><label>会いたい役職</label>${inp('ve-role',x.role,'例：人事部長以上')}</div>
+      <div class="field"><label>単価。複数パターンは「名前:金額」を「／」区切りで（例：通常:15000／2回目:20000、担当者:30000／課長:40000）。役職名と一致すれば自動、それ以外は行ごとに選択</label>${inp('ve-price',x.price,'例：15000 または 通常:15000／2回目:20000')}</div><div class="field"><label>会いたい役職</label>${inp('ve-role',x.role,'例：人事部長以上')}</div>
     </div>
+    <div class="field"><label>協力費（人事へ）。空欄なら5,000円。複数パターンは「名前:金額／名前:金額」（例：通常:5000／2回目:10000）</label>${inp('ve-fee',x.fee,'例：5000 または 通常:5000／2回目:10000')}</div>
     <div class="field"><label>一行説明（人事向け）</label>${inp('ve-desc',x.desc)}</div>
     <div class="field"><label>向いている企業</label>${inp('ve-for',x.for)}</div>
     <div class="field"><label>詳細説明（カードを押すと表示）</label><textarea id="ve-detail" rows="8">${esc(x.detail||'')}</textarea></div>
@@ -1091,7 +1097,7 @@ function openVendorEdit(id){
   document.getElementById('hrModal').hidden=false;document.body.classList.add('modal-open');
 }
 async function saveVendorEdit(id){
-  const g=k=>(document.getElementById('ve-'+k)||{}).value||'';const fields={name:g('name'),company:g('company'),cat:g('cat'),src:g('src'),price:g('price'),role:g('role'),desc:g('desc'),for:g('for'),detail:g('detail'),logo:g('logo'),cond:g('cond')};
+  const g=k=>(document.getElementById('ve-'+k)||{}).value||'';const fields={name:g('name'),company:g('company'),cat:g('cat'),src:g('src'),price:g('price'),role:g('role'),desc:g('desc'),for:g('for'),detail:g('detail'),logo:g('logo'),cond:g('cond'),fee:g('fee')};
   if(!fields.name||!fields.desc){toast('サービス名と一行説明は必須です');return;}
   const x=A.vendors.find(v=>v.id===id);if(x)Object.assign(x,fields);renderAdmin();
   try{await api('update_vendor',{token,id,fields});toast('保存しました');closeHr();}catch(e){toast('保存できませんでした：'+e.message);}
@@ -1137,8 +1143,8 @@ function renderSales(){
     <td><b>${mark(r.company,r.name)}${esc(r.name)}</b><div class="mini">${esc(r.company)}</div></td>
     <td><div class="vn-logo">${vmap[r.vendorId]?.logo?`<img class="vlogo" src="${esc(vmap[r.vendorId].logo)}" alt="" loading="lazy" onerror="this.remove()">`:''}<div>${esc(vmap[r.vendorId]?.company||r.vendorName)}<div class="mini">${esc(r.vendorName)}</div></div></div></td>
     <td>${resultSelect(r)}</td>
-    <td><input class="cell num" inputmode="numeric" value="${r.sales===''?'':r.sales}" onblur="saveResp('${r.id}','${r.vendorId}','sales',this.value.replace(/[^\d]/g,''))"></td>
-    <td><input class="cell num" inputmode="numeric" value="${r.fee===''?'':r.fee}" onblur="saveResp('${r.id}','${r.vendorId}','fee',this.value.replace(/[^\d]/g,''))"></td>
+    <td><div style="display:flex;flex-direction:column;gap:4px"><input class="cell num" inputmode="numeric" value="${r.sales===''?'':r.sales}" onblur="saveResp('${r.id}','${r.vendorId}','sales',this.value.replace(/[^\d]/g,''))">${priceSelect(r,vmap)}</div></td>
+    <td><div style="display:flex;flex-direction:column;gap:4px"><input class="cell num" inputmode="numeric" value="${r.fee===''?'':r.fee}" onblur="saveResp('${r.id}','${r.vendorId}','fee',this.value.replace(/[^\d]/g,''))">${feeSelect(r,vmap)}</div></td>
     <td><input class="cell num" inputmode="numeric" value="${r.refFee===''||r.refFee==null?'':r.refFee}" placeholder="—" onblur="saveResp('${r.id}','${r.vendorId}','refFee',this.value.replace(/[^\d]/g,''))"></td>
     <td class="num pos">${yen((Number(r.sales)||0)-(Number(r.fee)||0)-(Number(r.refFee)||0))}</td>
     <td><select class="cell st ${r.invoice==='入金済'?'s2':r.invoice==='請求済'?'s1':''}" onchange="saveResp('${r.id}','${r.vendorId}','invoice',this.value)">${opt(INVOICE,r.invoice||'未請求')}</select><div class="due-mini ${vOver?'over':''}">${cy?'期限 '+fmtD(cy.vendorDue)+(vOver?' 超過':''):''}</div></td>
@@ -1217,7 +1223,7 @@ function copySalesTsv(){const rows=[['商談日','会社','氏名','ベンダー
 const selLeads=new Set();
 function toggleLead(id,vid,on){const k=id+'|'+vid;on?selLeads.add(k):selLeads.delete(k);const bar=document.getElementById('lead-bulk');bar.hidden=selLeads.size===0;document.getElementById('lead-sel-n').textContent=selLeads.size+'件選択中';document.querySelectorAll('.grow').forEach(g=>{const c=g.querySelector('input[type=checkbox]');if(c)g.classList.toggle('sel',c.checked);});}
 async function bulkLeads(status){if(!status||!selLeads.size)return;const rows=A.responses.filter(r=>selLeads.has(r.id+'|'+r.vendorId));if(!confirm(`${rows.length}件を「${status}」にします。よろしいですか？`))return;
-  rows.forEach(r=>{r.status=status;if(status==='着座済み'){const vd=A.vendors.find(x=>x.id===r.vendorId);if(!r.date)r.date=new Date().toISOString().slice(0,10).replace(/-/g,'/');if(r.sales===''||r.sales==null){const p=priceFor(vd?.price,r.role);if(p)r.sales=p;}if(r.fee===''||r.fee==null)r.fee=5000;r.invoice=r.invoice||'未請求';r.payout=r.payout||'未払い';r.survey=r.survey||'未提出';r.result=r.result||'未確定';}});
+  rows.forEach(r=>{r.status=status;if(status==='着座済み'){const vd=A.vendors.find(x=>x.id===r.vendorId);if(!r.date)r.date=new Date().toISOString().slice(0,10).replace(/-/g,'/');if(r.sales===''||r.sales==null){const p=priceFor(vd?.price,r.role);if(p)r.sales=p;}if(r.fee===''||r.fee==null){const f=priceFor(vd?.fee,r.role);r.fee=f||5000;}r.invoice=r.invoice||'未請求';r.payout=r.payout||'未払い';r.survey=r.survey||'未提出';r.result=r.result||'未確定';}});
   selLeads.clear();renderAdmin();
   try{for(const r of rows){await api('update_response',{token,id:r.id,vendorId:r.vendorId,fields:{status}});}store.set('jc_admin',{tok:token,d:A,t:Date.now()});toast(`${rows.length}件を「${status}」にしました`);}catch(e){toast('保存できませんでした：'+e.message);loadAdmin();}}
 function globalSearch(q){const box=document.getElementById('g-results');q=(q||'').trim();if(!q){box.hidden=true;return;}
@@ -1316,7 +1322,7 @@ function renderAdmin(){
   try{const t=sessionStorage.getItem('jc_tab');if(t&&t!==curTab)setTab(t);const ss=sessionStorage.getItem('jc_ssub');if(ss)salesSub(ss);}catch(e){}
 }
 async function setStatus(id,vendorId,status,sel){
-  const r=A.responses.find(x=>x.id===id&&x.vendorId===vendorId);if(r){r.status=status;if(status==='着座済み'){const vd=A.vendors.find(x=>x.id===vendorId);if(!r.date)r.date=new Date().toISOString().slice(0,10).replace(/-/g,'/');if(r.sales===''||r.sales==null){const p=priceFor(vd?.price,r.role);if(p)r.sales=p;}if(r.fee===''||r.fee==null)r.fee=5000;{const hh=(A.hr||[]).find(x=>x.key===r.company.trim()+'|'+r.name.trim());if(hh&&hh.referrer&&(r.refFee===''||r.refFee==null))r.refFee=REFERRER_FEE;}r.invoice=r.invoice||'未請求';r.payout=r.payout||'未払い';r.survey=r.survey||'未提出';r.result=r.result||'未確定';}}sel.className='st s'+STATUS.indexOf(status);renderSales();renderHr();setTimeout(renderAdmin,350);
+  const r=A.responses.find(x=>x.id===id&&x.vendorId===vendorId);if(r){r.status=status;if(status==='着座済み'){const vd=A.vendors.find(x=>x.id===vendorId);if(!r.date)r.date=new Date().toISOString().slice(0,10).replace(/-/g,'/');if(r.sales===''||r.sales==null){const p=priceFor(vd?.price,r.role);if(p)r.sales=p;}if(r.fee===''||r.fee==null){const f=priceFor(vd?.fee,r.role);r.fee=f||5000;}{const hh=(A.hr||[]).find(x=>x.key===r.company.trim()+'|'+r.name.trim());if(hh&&hh.referrer&&(r.refFee===''||r.refFee==null))r.refFee=REFERRER_FEE;}r.invoice=r.invoice||'未請求';r.payout=r.payout||'未払い';r.survey=r.survey||'未提出';r.result=r.result||'未確定';}}sel.className='st s'+STATUS.indexOf(status);renderSales();renderHr();setTimeout(renderAdmin,350);
   try{await api('status',{token,id,vendorId,status});store.set('jc_admin',{tok:token,d:A,t:Date.now()});toast('保存しました');}
   catch(e){toast('保存できませんでした：'+e.message);loadAdmin();}
 }
