@@ -183,6 +183,9 @@ td input.cell.wide{min-width:150px}
 .group summary .who .mini{margin-top:1px}
 .group summary .cnt{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .group[open] summary{border-bottom:1px solid var(--line);background:var(--bg-2)}
+.grow.sel{background:var(--gold-soft)}
+.ck{display:flex;align-items:center;gap:8px}.ck input{width:16px;height:16px;accent-color:var(--navy)}
+.bulkbar{display:flex;gap:8px;align-items:center;background:var(--navy);color:#fff;border-radius:10px;padding:6px 10px}.bulkbar span{font-size:13px;font-weight:600}
 .grow{display:grid;grid-template-columns:auto 1fr auto;gap:10px 14px;align-items:center;padding:10px 16px;border-top:1px solid var(--line)}
 .grow:first-of-type{border-top:0}
 .grow .vn b{font-weight:600}
@@ -272,6 +275,24 @@ td input.cell.time{width:78px}
 .pager span{color:var(--muted);padding:0 6px;font-variant-numeric:tabular-nums}
 .totop{position:fixed;right:18px;bottom:22px;width:44px;height:44px;border-radius:50%;border:1px solid var(--line-2);background:#fff;color:var(--navy);font-size:18px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .15s;z-index:30}
 .totop.show{opacity:1;pointer-events:auto}
+.home-search{position:relative;margin-top:16px}
+.home-search input{width:100%;font-size:16px;padding:14px 16px;border-radius:12px;border:1px solid var(--line-2);box-shadow:var(--shadow)}
+.g-results{position:absolute;left:0;right:0;top:100%;margin-top:6px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(11,18,32,.14);z-index:40;max-height:360px;overflow:auto}
+.g-results button{display:flex;gap:10px;align-items:center;width:100%;text-align:left;border:0;background:transparent;padding:10px 14px;font-size:14px;border-bottom:1px solid var(--line)}
+.g-results button:hover{background:var(--bg-2)}.g-results .k{font-size:11px;color:var(--gold-2);letter-spacing:.06em;min-width:44px}
+.home-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+@media (max-width:820px){.home-grid{grid-template-columns:1fr}}
+.hcard{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}
+.hcard .sec h2{font-size:16px}
+.todo{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;cursor:pointer}
+.todo:last-child{border-bottom:0}.todo b{font-family:var(--serif);font-size:20px;color:var(--navy);font-variant-numeric:tabular-nums;min-width:2ch;text-align:right}
+.todo.alert b{color:#A32D1E}.todo .mini{margin-left:auto}
+.mrow{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.mrow:last-child{border-bottom:0}.mrow time{font-variant-numeric:tabular-nums;color:var(--navy);font-weight:600;min-width:52px}
+.mrow .who{flex:1;min-width:0}.mrow .who .mini{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vstat{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin:10px 0}
+.vstat div{background:#fff;padding:10px 12px}.vstat small{display:block;color:var(--muted);font-size:11.5px}.vstat b{font-size:20px;font-family:var(--serif);color:var(--navy)}
+.bar{height:8px;background:var(--bg-2);border-radius:4px;overflow:hidden;display:flex}.bar i{display:block;height:100%}
 .loading{color:var(--faint);font-size:13px;padding:24px;text-align:center}
 .err{background:#FDECEA;color:#A32D1E;border:1px solid #F1B7AE;border-radius:8px;padding:10px 14px;font-size:13.5px;margin-top:12px}
 .login{max-width:420px;margin:40px auto}
@@ -388,21 +409,34 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
     </div>
     <div id="adm" hidden>
       <div class="tabs" role="tablist">
-        <button role="tab" aria-selected="true" data-tab="leads" onclick="setTab('leads')">つなぎ</button>
+        <button role="tab" aria-selected="true" data-tab="home" onclick="setTab('home')">ホーム</button>
+        <button role="tab" aria-selected="false" data-tab="leads" onclick="setTab('leads')">つなぎ</button>
         <button role="tab" aria-selected="false" data-tab="meet" onclick="setTab('meet')">商談</button>
         <button role="tab" aria-selected="false" data-tab="hr" onclick="setTab('hr')">人事一覧</button>
         <button role="tab" aria-selected="false" data-tab="sales" onclick="setTab('sales')">売上・支払</button>
         <button role="tab" aria-selected="false" data-tab="vendors" onclick="setTab('vendors')">ベンダー</button>
       </div>
-      <div class="tabp" id="tab-leads">
+      <div class="tabp" id="tab-home">
+        <div class="home-search"><input id="g-q" placeholder="人事名・会社名・ベンダー名で検索（全体）" oninput="globalSearch(this.value)" autocomplete="off"><div class="g-results" id="g-results" hidden></div></div>
+        <div class="kpis compact" id="home-kpis"></div>
+        <div class="home-grid">
+          <div class="hcard"><div class="sec" style="margin:0 0 8px"><h2>今日の商談</h2><button class="ghost" onclick="setTab('meet');meetStage='all';pages.m=0;document.getElementById('m-month').value='';renderAdmin()">商談タブへ</button></div><div id="home-today"></div></div>
+          <div class="hcard"><div class="sec" style="margin:0 0 8px"><h2>やること</h2></div><div id="home-todo"></div></div>
+          <div class="hcard"><div class="sec" style="margin:0 0 8px"><h2>今週の商談予定</h2></div><div id="home-week"></div></div>
+          <div class="hcard"><div class="sec" style="margin:0 0 8px"><h2>最近の回答</h2><button class="ghost" onclick="setTab('leads');leadFilter='未対応';renderAdmin()">つなぎタブへ</button></div><div id="home-recent"></div></div>
+        </div>
+      </div>
+
+      <div class="tabp" id="tab-leads" hidden>
       <div class="kpis compact" id="kpis"></div>
       <div class="sec"><h2>つなぎ待ちリスト</h2><div class="tools">
         <button class="ghost" onclick="loadAdmin()">更新</button>
-        <button class="ghost" onclick="copyTsv()">スプレッドシート用にコピー</button>
+        <button class="ghost" onclick="copyTsv()">コピー</button><button class="ghost" onclick="downloadCsv('つなぎ',[['興味度','氏名','役職','会社','規模','関心領域','ベンダー','回答日','つなぎ状況']].concat(leads().map(x=>[RATE_LABEL[x.rate],x.name,x.role,x.company,x.size,x.areas.join('、'),x.vendorName,x.ts,x.status||'未対応'])))">CSV</button>
       </div></div>
       <div class="filterbar">
         <div class="seg" id="lead-seg"></div>
         <input id="lead-q" placeholder="人事名・会社名で絞り込み" oninput="renderAdmin()">
+        <div class="bulkbar" id="lead-bulk" hidden><span id="lead-sel-n"></span><select class="st" onchange="bulkLeads(this.value);this.value=''"><option value="">選んだ行をまとめて…</option><option>未対応</option><option>日程調整中</option><option>着座済み</option><option>見送り</option></select><button class="ghost" onclick="selLeads.clear();renderAdmin()">選択解除</button></div>
       </div>
       <p class="mini" style="margin:0 0 10px">人事ごとにまとめています。ベンダー行の状況を変えるとその場で保存され、次の段階へ移動します。</p>
       <div id="lead-groups" class="groups"></div>
@@ -431,7 +465,7 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
         <div class="sec"><h2>商談 <span class="mini" id="m-count"></span></h2><div class="tools"><span id="m-pager"></span>
           <div class="seg" id="m-view"><button type="button" aria-pressed="true" onclick="meetView='list';renderMeet()">日時順</button><button type="button" aria-pressed="false" onclick="meetView='vendor';renderMeet()">ベンダーごと</button></div>
           <button class="primary" style="width:auto;margin:0;padding:9px 14px;font-size:13px" onclick="openMeetModal()">＋ 商談を追加</button>
-          <button class="ghost" onclick="copyMeetTsv()">スプレッドシート用にコピー</button>
+          <button class="ghost" onclick="copyMeetTsv()">コピー</button><button class="ghost" onclick="downloadCsv('商談',[['商談日','時刻','会社','氏名','ベンダー','サービス','つなぎ状況','商談結果','売上','協力費','メモ']].concat(meetRows().map(r=>[r.date,r.time||'',r.company,r.name,(A.vendors.find(v=>v.id===r.vendorId)||{}).company||r.vendorName,r.vendorName,r.status,r.result||'未確定',r.sales,r.fee,r.memo||''])))">CSV</button>
         </div></div>
         <div class="filterbar">
           <div class="seg" id="m-stage"></div>
@@ -448,7 +482,7 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
         <div class="sec"><h2>登録されている人事 <span class="mini" id="hr-count"></span></h2><div class="tools"><span id="hr-pager"></span>
           <input id="hr-q" placeholder="会社名・氏名・企業名で検索" style="width:220px;padding:8px 10px" oninput="pages.hr=0;renderHr()">
           <select id="hr-f" class="st" style="padding:8px 10px" onchange="pages.hr=0;renderHr()"><option value="">つなぎ状況：すべて</option><option value="month">今月つないだ</option><option value="seated">着座済みがある</option><option value="progress">日程調整中がある</option><option value="none">まだつないでいない</option><option value="ref">紹介経由の人事</option></select>
-          <button class="ghost" onclick="copyHrTsv()">スプレッドシート用にコピー</button>
+          <button class="ghost" onclick="copyHrTsv()">コピー</button><button class="ghost" onclick="downloadCsv('人事一覧',[['会社','規模','氏名','役職','活動状況','タグ','紹介者','関心領域','新卒採用','中途採用','着座済み企業','協力費累計','受取方法','連絡先','メモ']].concat(hrRecords().map(h=>[h.company,h.size,h.name,h.role,h.act,(h.tags||[]).join('、'),h.referrer||'',(h.areas||[]).join('、'),h.newgrad||'',h.midcareer||'',h.seated.map(r=>r.vendorName).join('、'),h.fee,h.payment,h.contact,h.memo])))">CSV</button>
           <button class="ghost" onclick="act('backfill_hr','',
             '既存の回答から人事一覧を作りました')">回答から一覧を作り直す</button>
         </div></div>
@@ -471,7 +505,7 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
       <div class="tabp" id="tab-sales" hidden>
         <div class="sec"><h2>売上・支払</h2><div class="tools">
           <select id="s-month" class="st" style="padding:8px 10px" onchange="pages.s=0;renderSales()"></select>
-          <button class="ghost" onclick="copySalesTsv()">スプレッドシート用にコピー</button>
+          <button class="ghost" onclick="copySalesTsv()">コピー</button><button class="ghost" onclick="downloadCsv('売上',[['商談日','会社','氏名','ベンダー','商談結果','売上','協力費','紹介者報酬','ベンダー請求','人事支払','アンケート']].concat(seated().map(r=>[r.date,r.company,r.name,r.vendorName,r.result||'未確定',r.sales,r.fee,r.refFee||'',r.invoice||'未請求',r.payout||'未払い',r.survey||'未提出'])))">CSV</button>
         </div></div>
         <div class="kpis compact" id="s-kpis" style="margin-top:0"></div>
         <div class="subtabs" id="s-sub">
@@ -563,7 +597,7 @@ const RESULT_AFTER=['承認','非承認'],RESULT_BEFORE=['リスケ','ベンダ�
 function isCash(r){return r.status==='着座済み'&&r.result==='承認';}
 function resultSelect(r,extraClass){const cur=r.result||'未確定';return `<select class="cell st rs-${RESULTS.indexOf(cur)} ${extraClass||''}" onchange="saveResp('${r.id}','${r.vendorId}','result',this.value)"><option ${cur==='未確定'?'selected':''}>未確定</option><optgroup label="商談後">${RESULT_AFTER.map(o=>`<option ${o===cur?'selected':''}>${o}</option>`).join('')}</optgroup><optgroup label="商談前">${RESULT_BEFORE.map(o=>`<option ${o===cur?'selected':''}>${o}</option>`).join('')}</optgroup></select>`;}
 const INVOICE=["未請求","請求済","入金済"],PAYOUT=["未払い","支払済","辞退"],SURVEY=["未提出","提出済"],PAYMENT=["","個人口座","法人口座","辞退"];
-let curTab='leads';let leadFilter='未対応';
+let curTab='home';let leadFilter='未対応';
 const REFERRER_FEE=3000,REFERRAL_BONUS=10000;
 function hrRef(company,name){const h=(A.hr||[]).find(x=>x.key===String(company).trim()+'|'+String(name).trim());return h&&h.referrer?h.referrer:'';}
 function vchip(r,vmap,kind){const vd=vmap[r.vendorId]||{};const name=vd.company||r.vendorName;const logo=vd.logo?`<img src="${esc(vd.logo)}" alt="" loading="lazy" onerror="this.remove()">`:`<i>${esc((name||'?').slice(0,1))}</i>`;const d=r.date?`<time>${esc(kind==='seated'?r.date.slice(2,10):r.date.slice(5,10))}</time>`:'';return `<span class="vchip ${kind}" title="${esc(r.vendorName)}${r.date?' ・ '+esc(r.date):''}">${logo}<span>${esc(name)}</span>${d}</span>`;}
@@ -768,8 +802,8 @@ function renderLeads(L,vmap){
     return `<details class="group" ${i<8?'open':''}>
       <summary><div class="who"><b>${mark(h.company,h.name)}${esc(h.name)}</b><span class="mini">　${esc(h.role)}</span><div class="mini">${esc(h.company)} ・ ${esc(h.size)} ・ 回答 ${esc(h.ts.slice(0,10))}</div></div>
         <div class="cnt">${hot?`<span class="tag hot">ぜひ ${hot}</span>`:''}${warm?`<span class="tag warm">少し ${warm}</span>`:''}<span class="mini">${items.length}社</span></div></summary>
-      ${items.map(x=>`<div class="grow">
-        <span class="tag ${RATE_CLASS[x.rate]}">${RATE_LABEL[x.rate]}</span>
+      ${items.map(x=>`<div class="grow ${selLeads.has(x.id+'|'+x.vendorId)?'sel':''}">
+        <label class="ck"><input type="checkbox" ${selLeads.has(x.id+'|'+x.vendorId)?'checked':''} onchange="toggleLead('${x.id}','${x.vendorId}',this.checked)"><span class="tag ${RATE_CLASS[x.rate]}">${RATE_LABEL[x.rate]}</span></label>
         <div class="vn vn-logo">${vmap[x.vendorId]?.logo?`<img class="vlogo" src="${esc(vmap[x.vendorId].logo)}" alt="" loading="lazy" onerror="this.remove()">`:''}<div><b>${esc(vmap[x.vendorId]?.company||x.vendorName)}</b><div class="mini">${esc(x.vendorName)}${vmap[x.vendorId]?' ・ '+esc(vmap[x.vendorId].cat)+' ・ '+esc(vmap[x.vendorId].src):''}${x.date?' ・ 商談 '+esc(x.date.slice(0,10)):''}</div></div></div>
         <div class="rowctl"><select class="st s${x.statusIdx}" onchange="setStatus('${x.id}','${x.vendorId}',this.value,this)">${STATUS.map(st=>`<option ${st===(x.status||'未対応')?'selected':''}>${st}</option>`).join('')}</select>
         ${(x.status==='日程調整中'||x.status==='着座済み')?`<input type="date" class="cell" title="商談日" value="${esc((x.date||'').slice(0,10).replace(/\//g,'-'))}" onchange="saveResp('${x.id}','${x.vendorId}','date',this.value.replace(/-/g,'/'))">`:''}</div>
@@ -1105,6 +1139,58 @@ function copyHrTsv(){const rows=[['会社','規模','氏名','役職','関心領
 function copySalesTsv(){const rows=[['商談日','会社','氏名','ベンダー','商談結果','売上','協力費','紹介者報酬','粗利','ベンダー請求','人事支払','アンケート']];
   seated().forEach(r=>rows.push([r.date,r.company,r.name,r.vendorName,r.result||'未確定',r.sales,r.fee,r.refFee||'',(Number(r.sales)||0)-(Number(r.fee)||0)-(Number(r.refFee)||0),r.invoice||'未請求',r.payout||'未払い',r.survey||'未提出']));
   navigator.clipboard?.writeText(rows.map(r=>r.join('\t')).join('\n')).then(()=>toast('コピーしました'),()=>toast('コピーできませんでした'));}
+const selLeads=new Set();
+function toggleLead(id,vid,on){const k=id+'|'+vid;on?selLeads.add(k):selLeads.delete(k);const bar=document.getElementById('lead-bulk');bar.hidden=selLeads.size===0;document.getElementById('lead-sel-n').textContent=selLeads.size+'件選択中';document.querySelectorAll('.grow').forEach(g=>{const c=g.querySelector('input[type=checkbox]');if(c)g.classList.toggle('sel',c.checked);});}
+async function bulkLeads(status){if(!status||!selLeads.size)return;const rows=A.responses.filter(r=>selLeads.has(r.id+'|'+r.vendorId));if(!confirm(`${rows.length}件を「${status}」にします。よろしいですか？`))return;
+  rows.forEach(r=>{r.status=status;if(status==='着座済み'){const vd=A.vendors.find(x=>x.id===r.vendorId);if(!r.date)r.date=new Date().toISOString().slice(0,10).replace(/-/g,'/');if(r.sales===''||r.sales==null){const p=Number(String(vd?.price||'').replace(/[^\d]/g,''));if(p)r.sales=p;}if(r.fee===''||r.fee==null)r.fee=5000;r.invoice=r.invoice||'未請求';r.payout=r.payout||'未払い';r.survey=r.survey||'未提出';r.result=r.result||'未確定';}});
+  selLeads.clear();renderAdmin();
+  try{for(const r of rows){await api('update_response',{token,id:r.id,vendorId:r.vendorId,fields:{status}});}store.set('jc_admin',{tok:token,d:A,t:Date.now()});toast(`${rows.length}件を「${status}」にしました`);}catch(e){toast('保存できませんでした：'+e.message);loadAdmin();}}
+function globalSearch(q){const box=document.getElementById('g-results');q=(q||'').trim();if(!q){box.hidden=true;return;}
+  const vmap={};A.vendors.forEach(x=>vmap[x.id]=x);const out=[];
+  hrRecords().filter(h=>(h.company+h.name).includes(q)).slice(0,8).forEach(h=>out.push(`<button onclick="document.getElementById('g-results').hidden=true;openHr('${esc(h.key)}')"><span class="k">人事</span><span>${h.referrer?'🌸 ':''}${esc(h.name)}</span><span class="mini">${esc(h.company)} ・ ${esc(h.act)}</span></button>`));
+  A.vendors.filter(v=>((v.company||'')+v.name).includes(q)).slice(0,6).forEach(v=>out.push(`<button onclick="document.getElementById('g-results').hidden=true;openVendorStats('${v.id}')"><span class="k">ベンダー</span>${v.logo?`<img class="vlogo" src="${esc(v.logo)}" alt="" onerror="this.remove()">`:''}<span>${esc(v.company||v.name)}</span><span class="mini">${esc(v.name)}</span></button>`));
+  box.innerHTML=out.join('')||'<button disabled><span class="mini">該当なし</span></button>';box.hidden=false;}
+document.addEventListener('click',e=>{if(!e.target.closest('.home-search'))(document.getElementById('g-results')||{}).hidden=true;});
+function renderHome(){
+  const vmap={};A.vendors.forEach(x=>vmap[x.id]=x);const todayS=new Date().toISOString().slice(0,10).replace(/-/g,'/');const tm=thisMonth();
+  const L=leads();const un=L.filter(x=>(x.status||'未対応')==='未対応').length,pl=L.filter(x=>x.status==='日程調整中').length;
+  const pend=A.responses.filter(r=>r.status==='着座済み'&&(r.result||'未確定')==='未確定').length;
+  const seatedM=A.responses.filter(r=>r.status==='着座済み'&&(r.date||'').startsWith(tm));const cashM=seatedM.filter(isCash);
+  const sum=(a,f)=>a.reduce((x,r)=>x+(Number(r[f])||0),0);
+  const overInv=approved().filter(r=>{const cy=cycleOf(monthOf(r.date));return cy&&isOver(cy.vendorDue)&&(r.invoice||'未請求')!=='入金済';}).length;
+  const overPay=seated().filter(r=>{const cy=cycleOf(monthOf(r.date));return cy&&isOver(cy.hrDue)&&(r.payout||'未払い')==='未払い';}).length;
+  const noDate=A.responses.filter(r=>r.status==='日程調整中'&&!r.date).length;
+  document.getElementById('home-kpis').innerHTML=[['今月の着座',seatedM.length,'件（承認 '+cashM.length+'）'],['今月の確定売上',yen(sum(cashM,'sales')),'承認待ち '+yen(sum(seatedM.filter(r=>(r.result||'未確定')==='未確定'),'sales'))],['つなぎ待ち',un,'件（未対応）'],['登録人事',new Set(A.responses.map(x=>x.company.trim()+'|'+x.name.trim()).concat((A.hr||[]).map(h=>h.key))).size,'名']]
+    .map(([t,n,s])=>`<div class="kpi"><small>${t}</small><b>${n}</b><div class="sub">${s}</div></div>`).join('');
+  const todo=[['未対応のつなぎ',un,"setTab('leads');leadFilter='未対応';renderAdmin()",false],['日程調整中（商談日未入力）',noDate,"setTab('meet');meetStage='plan';renderAdmin()",noDate>0],['承認待ちの商談',pend,"setTab('meet');meetStage='pending';renderAdmin()",false],['入金期限を過ぎた請求',overInv,"setTab('sales');salesSub('rows');renderAdmin()",overInv>0],['支払期限を過ぎた協力費',overPay,"setTab('sales');salesSub('batch');renderAdmin()",overPay>0],['ベンダー掲載申し込み',A.pending.length,"setTab('leads');renderAdmin()",false]];
+  document.getElementById('home-todo').innerHTML=todo.map(([l,n,act,al])=>`<div class="todo ${al?'alert':''}" onclick="${act}"><span>${l}</span><b>${n}</b></div>`).join('');
+  const mrow=r=>`<div class="mrow"><time>${esc(r.date===todayS?(r.time||'--:--'):r.date.slice(5,10)+(r.time?' '+r.time:''))}</time><div class="who"><b>${mark(r.company,r.name)}${esc(r.name)}</b><div class="mini">${esc(r.company)} × ${esc(vmap[r.vendorId]?.company||r.vendorName)}</div></div><span class="tag ${r.status==='着座済み'?'hot':'warm'}">${esc(r.status)}</span></div>`;
+  const today=A.responses.filter(r=>(r.status==='日程調整中'||r.status==='着座済み')&&(r.date||'').slice(0,10)===todayS).sort((a,b)=>dtKey(a).localeCompare(dtKey(b)));
+  document.getElementById('home-today').innerHTML=today.map(mrow).join('')||'<div class="mini" style="padding:8px 0">今日の商談はありません。</div>';
+  const end=new Date(TODAY);end.setDate(end.getDate()+7);const endS=end.toISOString().slice(0,10).replace(/-/g,'/');
+  const week=A.responses.filter(r=>(r.status==='日程調整中'||r.status==='着座済み')&&(r.date||'')>todayS&&(r.date||'')<=endS).sort((a,b)=>dtKey(a).localeCompare(dtKey(b)));
+  document.getElementById('home-week').innerHTML=week.slice(0,8).map(mrow).join('')||'<div class="mini" style="padding:8px 0">今後7日間の商談予定はありません。</div>';
+  const recent=A.responses.filter(r=>!(r.memo||'').startsWith('旧シート')&&r.rate>=2).sort((a,b)=>(b.ts||'').localeCompare(a.ts||'')).slice(0,8);
+  document.getElementById('home-recent').innerHTML=recent.map(r=>`<div class="mrow"><time>${esc((r.ts||'').slice(5,10))}</time><div class="who"><b>${mark(r.company,r.name)}${esc(r.name)}</b><div class="mini">${esc(r.company)} → ${esc(vmap[r.vendorId]?.company||r.vendorName)}</div></div><span class="tag ${RATE_CLASS[r.rate]}">${RATE_LABEL[r.rate]}</span></div>`).join('')||'<div class="mini" style="padding:8px 0">まだ回答がありません。</div>';
+}
+function openVendorStats(id){
+  const x=A.vendors.find(v=>v.id===id);if(!x)return;const rs=A.responses.filter(r=>r.vendorId===id);
+  const seatedR=rs.filter(r=>r.status==='着座済み'),ap=seatedR.filter(isCash);const rate={3:0,2:0,1:0};rs.forEach(r=>rate[r.rate]=(rate[r.rate]||0)+1);const tot=rate[3]+rate[2]+rate[1]||1;
+  const sum=(a,f)=>a.reduce((v,r)=>v+(Number(r[f])||0),0);
+  const byM={};ap.forEach(r=>{const m=monthOf(r.date);byM[m]=(byM[m]||0)+1;});
+  document.getElementById('hr-m-body').innerHTML=`<div class="eyebrow">ベンダー成績</div>
+    <div class="vhead"><div class="vid">${logoHtml(x)}<div><div class="vname">${esc(x.company||x.name)}</div><div class="vco">${esc(x.name)} ・ ${esc(x.cat)} ・ ${esc(x.src)}${x.price?' ・ 単価 '+esc(x.price):''}</div></div></div><button class="ghost" onclick="openVendorEdit('${x.id}')">編集</button></div>
+    <div class="vstat"><div><small>興味あり（ぜひ＋少し）</small><b>${rate[3]+rate[2]}</b></div><div><small>着座</small><b>${seatedR.length}</b></div><div><small>承認率</small><b>${seatedR.length?Math.round(ap.length/seatedR.length*100)+'%':'—'}</b></div><div><small>確定売上</small><b>${yen(sum(ap,'sales'))}</b></div></div>
+    <div class="mini" style="margin:6px 0 4px">人事の反応（ぜひ ${rate[3]} ／ 少し ${rate[2]} ／ 不要 ${rate[1]}）</div>
+    <div class="bar"><i style="width:${rate[3]/tot*100}%;background:var(--navy)"></i><i style="width:${rate[2]/tot*100}%;background:var(--gold)"></i><i style="width:${rate[1]/tot*100}%;background:var(--line-2)"></i></div>
+    ${x.cond?`<div class="mini cond" style="margin-top:10px">運営メモ：${esc(x.cond)}</div>`:''}
+    <div class="sec" style="margin:16px 0 8px"><h2 style="font-size:15px">月別の承認件数</h2></div>
+    <div class="chips">${Object.keys(byM).sort().reverse().map(m=>`<span class="chip" style="cursor:default">${m==='日付不明'?m:m.replace('-','年')+'月'} <b>${byM[m]}</b></span>`).join('')||'<span class="mini">—</span>'}</div>
+    <div class="sec" style="margin:16px 0 8px"><h2 style="font-size:15px">直近の商談</h2><button class="ghost" onclick="closeHr();setTab('meet');document.getElementById('m-vendor').value='${x.id}';meetStage='all';renderAdmin()">商談タブで見る</button></div>
+    <div class="tablewrap"><table style="min-width:520px"><thead><tr><th>商談日</th><th>人事</th><th>状況</th><th>結果</th></tr></thead><tbody>${rs.filter(r=>r.status==='着座済み'||r.status==='日程調整中').sort((a,b)=>dtKey(b).localeCompare(dtKey(a))).slice(0,10).map(r=>`<tr><td class="mini">${esc(r.date||'—')}${r.time?' '+esc(r.time):''}</td><td><b>${mark(r.company,r.name)}${esc(r.name)}</b><div class="mini">${esc(r.company)}</div></td><td><span class="tag ${r.status==='着座済み'?'hot':'warm'}">${esc(r.status)}</span></td><td>${(r.status==='着座済み')?resultSelect(r):'—'}</td></tr>`).join('')||'<tr><td colspan="4" class="mini" style="padding:12px;text-align:center">—</td></tr>'}</tbody></table></div>`;
+  document.getElementById('hrModal').hidden=false;document.body.classList.add('modal-open');
+}
+function downloadCsv(name,rows){const csv='\ufeff'+rows.map(r=>r.map(v=>{const s=String(v==null?'':v);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}).join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=name+'_'+new Date().toISOString().slice(0,10)+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);}
 const PAGE=50;const pages={hr:0,m:0,s:0};
 function pager(key,total,elId){const el=document.getElementById(elId);if(!el)return;const n=Math.max(1,Math.ceil(total/PAGE));if(pages[key]>n-1)pages[key]=n-1;if(n<=1){el.innerHTML='';return;}
   el.innerHTML=`<span class="pager"><button ${pages[key]===0?'disabled':''} onclick="pages.${key}--;renderAdmin()">‹ 前</button><span>${pages[key]+1} / ${n}（${total}件）</span><button ${pages[key]>=n-1?'disabled':''} onclick="pages.${key}++;renderAdmin()">次 ›</button></span>`;}
@@ -1135,11 +1221,11 @@ function renderAdmin(){
     :'<div class="mini" style="padding:6px 2px">承認待ちの申し込みはありません。</div>';
   document.getElementById('pcount').textContent=A.pending.length?`${A.pending.length}件`:'';
   // vendors
-  document.getElementById('vadmin').innerHTML=A.vendors.map(x=>`<div class="vrow"><div class="top"><span style="display:flex;align-items:center;gap:8px">${logoHtml(x)}<b>${esc(x.name)}</b><button class="del" onclick="openVendorEdit('${x.id}')">編集</button></span><button class="pub ${x.published?'':'off'}" style="border:0;cursor:pointer" onclick="act('set_published','${x.id}','${x.published?'非掲載にしました':'掲載しました'}',{published:${!x.published}})">${x.published?'掲載中':'非掲載'}</button></div>
+  document.getElementById('vadmin').innerHTML=A.vendors.map(x=>`<div class="vrow"><div class="top"><span style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="openVendorStats('${x.id}')">${logoHtml(x)}<b>${esc(x.name)}</b></span><span><button class="del" onclick="openVendorStats('${x.id}')">成績</button><button class="del" onclick="openVendorEdit('${x.id}')">編集</button><button class="pub ${x.published?'':'off'}" style="border:0;cursor:pointer" onclick="act('set_published','${x.id}','${x.published?'非掲載にしました':'掲載しました'}',{published:${!x.published}})">${x.published?'掲載中':'非掲載'}</button></span></div>
     <div class="mini">${esc(x.company)} ・ ${esc(x.cat)} ・ ${esc(x.src)}${x.price?' ・ 単価 '+esc(x.price):''}${x.role?' ・ '+esc(x.role):''}</div><div>${esc(x.desc)}</div><div class="mini">向け：${esc(x.for)}</div>${x.cond?`<div class="mini cond">運営メモ：${esc(x.cond)}</div>`:''}<div class="mini">${x.detail?'詳細説明あり（'+x.detail.length+'字）':'<span style="color:#A32D1E">詳細説明なし</span>'}</div></div>`).join('');
   document.getElementById('vcount').textContent=`${A.vendors.length}社（掲載中 ${A.vendors.filter(x=>x.published).length} ・ DYM ${A.vendors.filter(x=>x.src==='DYM').length}）`;
   const ac=document.getElementById('a-cat');if(!ac.options.length)AREAS.forEach(a=>{const o=document.createElement('option');o.textContent=a;ac.appendChild(o);});
-  renderPropose();renderHr();renderSales();renderMeet();
+  renderPropose();renderHr();renderSales();renderMeet();renderHome();
   try{const t=sessionStorage.getItem('jc_tab');if(t&&t!==curTab)setTab(t);const ss=sessionStorage.getItem('jc_ssub');if(ss)salesSub(ss);}catch(e){}
 }
 async function setStatus(id,vendorId,status,sel){
