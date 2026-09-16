@@ -249,6 +249,17 @@ td input.cell.time{width:78px}
 .act{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;margin-right:4px}
 .act::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
 .act-on{background:var(--ok-soft);color:var(--ok)}.act-idle{background:var(--gold-soft);color:var(--gold-2)}.act-off{background:var(--cold-soft);color:var(--muted)}
+/* 絞り込みバーを大きく */
+.filterbar{gap:12px;margin:4px 0 16px}
+.filterbar .seg{padding:4px}
+.filterbar .seg button{padding:9px 16px;font-size:14.5px}
+.filterbar .seg button b{font-size:12px;padding:1px 8px}
+.filterbar select.st,.filterbar input{font-size:14.5px;padding:10px 14px;min-height:44px;border-radius:10px;width:auto}
+.filterbar select.st{padding-right:32px}
+.filterbar input{width:300px;max-width:100%}
+.sec .tools .seg button{padding:8px 14px;font-size:14px}
+.sec .tools .ghost,.sec .tools .primary{padding:10px 16px;font-size:14px}
+@media (max-width:600px){.filterbar input{width:100%}.filterbar .seg{width:100%}.filterbar .seg button{flex:1;justify-content:center}}
 .loading{color:var(--faint);font-size:13px;padding:24px;text-align:center}
 .err{background:#FDECEA;color:#A32D1E;border:1px solid #F1B7AE;border-radius:8px;padding:10px 14px;font-size:13.5px;margin-top:12px}
 .login{max-width:420px;margin:40px auto}
