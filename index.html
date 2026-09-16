@@ -260,6 +260,18 @@ td input.cell.time{width:78px}
 .sec .tools .seg button{padding:8px 14px;font-size:14px}
 .sec .tools .ghost,.sec .tools .primary{padding:10px 16px;font-size:14px}
 @media (max-width:600px){.filterbar input{width:100%}.filterbar .seg{width:100%}.filterbar .seg button{flex:1;justify-content:center}}
+.tabs{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);backdrop-filter:blur(6px);padding-top:6px}
+.kpis.compact .kpi{padding:10px 14px}.kpis.compact .kpi b{font-size:22px}.kpis.compact{margin-top:14px}
+.tablewrap thead th{position:sticky;top:0;z-index:2}
+.subtabs{display:inline-flex;gap:2px;background:var(--bg-2);border:1px solid var(--line);border-radius:999px;padding:4px;margin:14px 0 6px;flex-wrap:wrap}
+.subtabs button{border:0;background:transparent;color:var(--muted);padding:8px 16px;border-radius:999px;font-size:14px;font-weight:500}
+.subtabs button[aria-pressed="true"]{background:var(--navy);color:#fff;font-weight:700}
+.pager{display:inline-flex;gap:4px;align-items:center;font-size:13px}
+.pager button{border:1px solid var(--line-2);background:#fff;border-radius:8px;padding:6px 10px;font-size:13px;color:var(--navy)}
+.pager button[disabled]{opacity:.4;cursor:default}
+.pager span{color:var(--muted);padding:0 6px;font-variant-numeric:tabular-nums}
+.totop{position:fixed;right:18px;bottom:22px;width:44px;height:44px;border-radius:50%;border:1px solid var(--line-2);background:#fff;color:var(--navy);font-size:18px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .15s;z-index:30}
+.totop.show{opacity:1;pointer-events:auto}
 .loading{color:var(--faint);font-size:13px;padding:24px;text-align:center}
 .err{background:#FDECEA;color:#A32D1E;border:1px solid #F1B7AE;border-radius:8px;padding:10px 14px;font-size:13.5px;margin-top:12px}
 .login{max-width:420px;margin:40px auto}
@@ -375,7 +387,6 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
       <div id="login-err"></div>
     </div>
     <div id="adm" hidden>
-      <div class="kpis" id="kpis"></div>
       <div class="tabs" role="tablist">
         <button role="tab" aria-selected="true" data-tab="leads" onclick="setTab('leads')">つなぎ</button>
         <button role="tab" aria-selected="false" data-tab="meet" onclick="setTab('meet')">商談</button>
@@ -384,6 +395,7 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
         <button role="tab" aria-selected="false" data-tab="vendors" onclick="setTab('vendors')">ベンダー</button>
       </div>
       <div class="tabp" id="tab-leads">
+      <div class="kpis compact" id="kpis"></div>
       <div class="sec"><h2>つなぎ待ちリスト</h2><div class="tools">
         <button class="ghost" onclick="loadAdmin()">更新</button>
         <button class="ghost" onclick="copyTsv()">スプレッドシート用にコピー</button>
@@ -416,37 +428,37 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
       </div><!-- /tab-leads -->
 
       <div class="tabp" id="tab-meet" hidden>
-        <div class="sec"><h2>商談 <span class="mini" id="m-count"></span></h2><div class="tools">
+        <div class="sec"><h2>商談 <span class="mini" id="m-count"></span></h2><div class="tools"><span id="m-pager"></span>
           <div class="seg" id="m-view"><button type="button" aria-pressed="true" onclick="meetView='list';renderMeet()">日時順</button><button type="button" aria-pressed="false" onclick="meetView='vendor';renderMeet()">ベンダーごと</button></div>
           <button class="primary" style="width:auto;margin:0;padding:9px 14px;font-size:13px" onclick="openMeetModal()">＋ 商談を追加</button>
           <button class="ghost" onclick="copyMeetTsv()">スプレッドシート用にコピー</button>
         </div></div>
         <div class="filterbar">
           <div class="seg" id="m-stage"></div>
-          <select id="m-result" class="st" onchange="renderMeet()"><option value="">結果：すべて</option><option value="未確定">未確定（承認待ち）</option><option value="承認">承認</option><option value="非承認">非承認</option><option value="リスケ">リスケ</option><option value="ベンダーNG">ベンダーNG</option><option value="その他">その他</option></select>
-          <select id="m-vendor" class="st" onchange="renderMeet()"><option value="">ベンダー：すべて</option></select>
-          <select id="m-month" class="st" onchange="renderMeet()"><option value="">期間：すべて</option></select>
-          <input id="m-q" placeholder="人事名・会社名で絞り込み" oninput="renderMeet()">
+          <select id="m-result" class="st" onchange="pages.m=0;renderMeet()"><option value="">結果：すべて</option><option value="未確定">未確定（承認待ち）</option><option value="承認">承認</option><option value="非承認">非承認</option><option value="リスケ">リスケ</option><option value="ベンダーNG">ベンダーNG</option><option value="その他">その他</option></select>
+          <select id="m-vendor" class="st" onchange="pages.m=0;renderMeet()"><option value="">ベンダー：すべて</option></select>
+          <select id="m-month" class="st" onchange="pages.m=0;renderMeet()"><option value="">期間：すべて</option></select>
+          <input id="m-q" placeholder="人事名・会社名で絞り込み" oninput="pages.m=0;renderMeet()">
         </div>
         <p class="mini" style="margin:-4px 0 10px">商談日・時刻・結果はその場で保存されます。結果が「承認」になった商談だけが売上として確定し、売上タブの請求一覧に乗ります。</p>
         <div id="m-body"></div>
       </div>
 
       <div class="tabp" id="tab-hr" hidden>
-        <div class="sec"><h2>登録されている人事 <span class="mini" id="hr-count"></span></h2><div class="tools">
-          <input id="hr-q" placeholder="会社名・氏名・企業名で検索" style="width:220px;padding:8px 10px" oninput="renderHr()">
-          <select id="hr-f" class="st" style="padding:8px 10px" onchange="renderHr()"><option value="">つなぎ状況：すべて</option><option value="month">今月つないだ</option><option value="seated">着座済みがある</option><option value="progress">日程調整中がある</option><option value="none">まだつないでいない</option><option value="ref">紹介経由の人事</option></select>
+        <div class="sec"><h2>登録されている人事 <span class="mini" id="hr-count"></span></h2><div class="tools"><span id="hr-pager"></span>
+          <input id="hr-q" placeholder="会社名・氏名・企業名で検索" style="width:220px;padding:8px 10px" oninput="pages.hr=0;renderHr()">
+          <select id="hr-f" class="st" style="padding:8px 10px" onchange="pages.hr=0;renderHr()"><option value="">つなぎ状況：すべて</option><option value="month">今月つないだ</option><option value="seated">着座済みがある</option><option value="progress">日程調整中がある</option><option value="none">まだつないでいない</option><option value="ref">紹介経由の人事</option></select>
           <button class="ghost" onclick="copyHrTsv()">スプレッドシート用にコピー</button>
           <button class="ghost" onclick="act('backfill_hr','',
             '既存の回答から人事一覧を作りました')">回答から一覧を作り直す</button>
         </div></div>
         <div class="filterbar" id="hr-filters">
           <div class="seg" id="hr-tagseg"></div>
-          <select id="hr-act" class="st" onchange="renderHr()"><option value="">活動状況：すべて</option><option>活動中</option><option>休眠</option><option>長期未接触</option></select>
-          <select id="hr-size" class="st" onchange="renderHr()"><option value="">規模：すべて</option><option>〜50名</option><option>50〜300名</option><option>300〜1,000名</option><option>1,000名〜</option></select>
-          <select id="hr-mid" class="st" onchange="renderHr()"><option value="">中途採用数：すべて</option><option value="0">0名</option><option value="1-10">1〜10名</option><option value="11-30">11〜30名</option><option value="31-50">31〜50名</option><option value="51-100">51〜100名</option><option value="101">101名以上</option></select>
-          <select id="hr-new" class="st" onchange="renderHr()"><option value="">新卒採用数：すべて</option><option value="0">0名</option><option value="1-10">1〜10名</option><option value="11-30">11〜30名</option><option value="31-50">31〜50名</option><option value="51-100">51〜100名</option><option value="101">101名以上</option></select>
-          <select id="hr-area" class="st" onchange="renderHr()"><option value="">関心領域：すべて</option></select>
+          <select id="hr-act" class="st" onchange="pages.hr=0;renderHr()"><option value="">活動状況：すべて</option><option>活動中</option><option>休眠</option><option>長期未接触</option></select>
+          <select id="hr-size" class="st" onchange="pages.hr=0;renderHr()"><option value="">規模：すべて</option><option>〜50名</option><option>50〜300名</option><option>300〜1,000名</option><option>1,000名〜</option></select>
+          <select id="hr-mid" class="st" onchange="pages.hr=0;renderHr()"><option value="">中途採用数：すべて</option><option value="0">0名</option><option value="1-10">1〜10名</option><option value="11-30">11〜30名</option><option value="31-50">31〜50名</option><option value="51-100">51〜100名</option><option value="101">101名以上</option></select>
+          <select id="hr-new" class="st" onchange="pages.hr=0;renderHr()"><option value="">新卒採用数：すべて</option><option value="0">0名</option><option value="1-10">1〜10名</option><option value="11-30">11〜30名</option><option value="31-50">31〜50名</option><option value="51-100">51〜100名</option><option value="101">101名以上</option></select>
+          <select id="hr-area" class="st" onchange="pages.hr=0;renderHr()"><option value="">関心領域：すべて</option></select>
           <button class="ghost" onclick="['hr-size','hr-mid','hr-new','hr-area','hr-f','hr-act'].forEach(i=>document.getElementById(i).value='');document.getElementById('hr-q').value='';hrTag='';renderHr()">条件をクリア</button>
         </div>
         <p class="mini" style="margin:-4px 0 10px">人事の行を押すと、回答内容の詳細とつないだ企業の一覧が開きます。タグ・受取方法・連絡先・メモはそこで編集できます。</p>
@@ -458,30 +470,44 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
 
       <div class="tabp" id="tab-sales" hidden>
         <div class="sec"><h2>売上・支払</h2><div class="tools">
-          <select id="s-month" class="st" style="padding:8px 10px" onchange="renderSales()"></select>
+          <select id="s-month" class="st" style="padding:8px 10px" onchange="pages.s=0;renderSales()"></select>
           <button class="ghost" onclick="copySalesTsv()">スプレッドシート用にコピー</button>
         </div></div>
-        <div class="kpis" id="s-kpis" style="margin-top:0"></div>
+        <div class="kpis compact" id="s-kpis" style="margin-top:0"></div>
+        <div class="subtabs" id="s-sub">
+          <button aria-pressed="true" onclick="salesSub('plan')">予定・締め</button>
+          <button aria-pressed="false" onclick="salesSub('batch')">請求・振込一覧</button>
+          <button aria-pressed="false" onclick="salesSub('rows')">商談明細</button>
+          <button aria-pressed="false" onclick="salesSub('months')">月別サマリー</button>
+        </div>
+        <div class="ssub" id="ss-plan">
         <div class="cycle" id="s-now"></div>
         <div class="cycle" id="s-cycle"></div>
+        </div>
+        <div class="ssub" id="ss-batch" hidden>
         <div class="batches">
           <div><div class="sec" style="margin-top:18px"><h2>ベンダー別 請求一覧</h2></div>
-            <div class="tablewrap"><table style="min-width:420px"><thead><tr><th>ベンダー</th><th>件数</th><th>請求額</th><th>状況</th></tr></thead><tbody id="s-byvendor"></tbody></table></div></div>
+            <div class="tablewrap"><table style="min-width:420px"><thead><tr><th>ベンダー</th><th>件数</th><th>請求額</th><th>状況</th><th>一括変更</th></tr></thead><tbody id="s-byvendor"></tbody></table></div></div>
           <div><div class="sec" style="margin-top:18px"><h2>紹介者別 報酬一覧</h2></div>
             <div class="tablewrap"><table style="min-width:420px"><thead><tr><th>紹介者</th><th>紹介報酬</th><th>商談報酬</th><th>合計</th></tr></thead><tbody id="s-byref"></tbody></table></div>
             <p class="mini" style="margin-top:6px">紹介報酬 10,000円／紹介した人事1名（その人事の初回着座月に計上）、商談報酬 3,000円／着座1件。支払サイクルは人事の協力費と同じ想定です。</p></div>
           <div><div class="sec" style="margin-top:18px"><h2>人事別 協力費 振込一覧</h2></div>
-            <div class="tablewrap"><table style="min-width:420px"><thead><tr><th>人事</th><th>件数</th><th>振込額</th><th>受取方法</th><th>状況</th></tr></thead><tbody id="s-byhr"></tbody></table></div></div>
+            <div class="tablewrap"><table style="min-width:420px"><thead><tr><th>人事</th><th>件数</th><th>振込額</th><th>受取方法</th><th>状況</th><th>一括変更</th></tr></thead><tbody id="s-byhr"></tbody></table></div></div>
         </div>
-        <div class="sec" style="margin-top:22px"><h2>商談ごとの明細</h2></div>
+        </div>
+        <div class="ssub" id="ss-rows" hidden>
+        <div class="sec" style="margin-top:8px"><h2>商談ごとの明細</h2><div class="tools" id="s-pager"></div></div>
         <p class="mini" style="margin:-4px 0 10px">「つなぎ状況」を着座済みにすると自動でここに並び、売上はベンダーの単価、協力費は5,000円が入ります。数字と状態は直接編集でき、その場で保存されます。期限を過ぎて未入金・未払いの行は赤く表示します。</p>
         <div class="tablewrap"><table>
           <thead><tr><th>商談日</th><th>人事</th><th>ベンダー</th><th>商談結果</th><th>売上</th><th>協力費</th><th>紹介者報酬</th><th>粗利</th><th>ベンダー請求<div class="mini">入金期限</div></th><th>人事支払<div class="mini">支払期限</div></th><th>アンケート</th></tr></thead>
           <tbody id="s-rows"></tbody></table></div>
-        <div class="sec"><h2>月別サマリー</h2></div>
+        </div>
+        <div class="ssub" id="ss-months" hidden>
+        <div class="sec" style="margin-top:8px"><h2>月別サマリー</h2></div>
         <div class="tablewrap"><table style="min-width:520px">
           <thead><tr><th>商談月</th><th>着座</th><th>売上</th><th>協力費</th><th>粗利</th><th>入金期限</th><th>未入金</th><th>支払期限</th><th>未払い</th></tr></thead>
           <tbody id="s-months"></tbody></table></div>
+        </div>
       </div>
 
       <div class="tabp" id="tab-vendors" hidden>
@@ -522,6 +548,7 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
     <div id="hr-m-body"></div>
   </div>
 </div>
+<button class="totop" id="totop" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="上へ戻る">↑</button>
 <div class="toast" id="toast"></div>
 
 <script src="config.js"></script>
@@ -783,7 +810,7 @@ function renderMeet(){
   let R=all.filter(r=>(meetStage==='all')||(meetStage==='plan'&&r.status==='日程調整中')||(meetStage==='done'&&r.status==='着座済み')||(meetStage==='pending'&&r.status==='着座済み'&&(r.result||'未確定')==='未確定'));
   if(fr)R=R.filter(r=>(r.result||'未確定')===fr);if(fv)R=R.filter(r=>r.vendorId===fv);if(fm)R=R.filter(r=>monthOf(r.date)===fm);if(q)R=R.filter(r=>(r.company+r.name).includes(q));
   R.sort((a,b)=>dtKey(b).localeCompare(dtKey(a)));
-  document.getElementById('m-count').textContent=`${R.length}件`;
+  document.getElementById('m-count').textContent=`${R.length}件`;pager('m',meetView==='list'?R.length:0,'m-pager');
   const todayS=new Date().toISOString().slice(0,10).replace(/-/g,'/');
   const row=r=>{const d=(r.date||'').slice(0,10);const cls=d===todayS?'today':(d&&d<todayS?'past':'');return `<tr class="${cls}">
     <td><div style="display:flex;gap:4px;align-items:center"><input type="date" class="cell" value="${esc(d.replace(/\//g,'-'))}" onchange="saveResp('${r.id}','${r.vendorId}','date',this.value.replace(/-/g,'/'))"><input type="time" class="cell time" value="${esc(r.time||'')}" onchange="saveResp('${r.id}','${r.vendorId}','time',this.value)"></div></td>
@@ -792,12 +819,14 @@ function renderMeet(){
     <td><select class="st s${Math.max(0,STATUS.indexOf(r.status||'未対応'))}" onchange="setStatus('${r.id}','${r.vendorId}',this.value,this)">${STATUS.map(st=>`<option ${st===(r.status||'未対応')?'selected':''}>${st}</option>`).join('')}</select></td>
     <td>${resultSelect(r)}</td>
     <td class="num">${isCash(r)?'<span class="pos">'+yen(r.sales)+'</span>':(r.status==='着座済み'&&(r.result||'未確定')==='未確定'?'<span class="mini">承認待ち '+yen(r.sales)+'</span>':'<span class="mini">—</span>')}</td>
+    <td>${r.status==='着座済み'?`<select class="cell st ${r.invoice==='入金済'?'s2':r.invoice==='請求済'?'s1':''}" onchange="saveResp('${r.id}','${r.vendorId}','invoice',this.value)">${INVOICE.map(o=>`<option ${o===(r.invoice||'未請求')?'selected':''}>${o}</option>`).join('')}</select>`:'<span class="mini">—</span>'}</td>
+    <td>${r.status==='着座済み'?`<select class="cell st ${r.payout==='支払済'?'s2':''}" onchange="saveResp('${r.id}','${r.vendorId}','payout',this.value)">${PAYOUT.map(o=>`<option ${o===(r.payout||'未払い')?'selected':''}>${o}</option>`).join('')}</select>`:'<span class="mini">—</span>'}</td>
     <td><input class="cell wide" value="${esc(r.memo||'')}" placeholder="メモ" onblur="saveResp('${r.id}','${r.vendorId}','memo',this.value)"></td>
   </tr>`;};
-  const head=(withVendor)=>`<thead><tr><th>商談日時</th><th>人事</th>${withVendor?'<th>ベンダー</th>':''}<th>つなぎ状況</th><th>商談結果</th><th>売上</th><th>メモ</th></tr></thead>`;
+  const head=(withVendor)=>`<thead><tr><th>商談日時</th><th>人事</th>${withVendor?'<th>ベンダー</th>':''}<th>つなぎ状況</th><th>商談結果</th><th>売上</th><th>ベンダー請求</th><th>人事支払</th><th>メモ</th></tr></thead>`;
   const body=document.getElementById('m-body');
   if(!R.length){body.innerHTML='<div class="empty">該当する商談がありません。</div>';return;}
-  if(meetView==='list'){body.innerHTML=`<div class="tablewrap"><table style="min-width:980px">${head(true)}<tbody>${R.map(row).join('')}</tbody></table></div>`;return;}
+  if(meetView==='list'){body.innerHTML=`<div class="tablewrap"><table style="min-width:1180px">${head(true)}<tbody>${page('m',R).map(row).join('')}</tbody></table></div>`;return;}
   const byV={};R.forEach(r=>{(byV[r.vendorId]=byV[r.vendorId]||[]).push(r);});
   body.innerHTML=Object.keys(byV).sort((a,b)=>byV[b].length-byV[a].length).map(id=>{const rs=byV[id];const vd=vmap[id]||{};const next=rs.filter(r=>(r.date||'')>=todayS).sort((a,b)=>dtKey(a).localeCompare(dtKey(b)))[0];
     return `<div class="mv"><div class="mv-head">${vd.logo?`<img class="vlogo" src="${esc(vd.logo)}" alt="" onerror="this.remove()">`:''}<b>${esc(vd.company||rs[0].vendorName)}</b><span class="mini">${esc(rs[0].vendorName)}</span><span class="mini">${rs.length}件 ・ 承認 ${rs.filter(isCash).length} ・ 承認待ち ${rs.filter(r=>r.status==='着座済み'&&(r.result||'未確定')==='未確定').length}${next?' ・ 次回 '+esc(next.date)+(next.time?' '+esc(next.time):''):''}</span></div>
@@ -819,9 +848,9 @@ function renderHr(){
   if(fact)rows=rows.filter(h=>h.act===fact);if(fs)rows=rows.filter(h=>h.size===fs);if(fm)rows=rows.filter(h=>numBand(h.midcareer)===fm);if(fn)rows=rows.filter(h=>numBand(h.newgrad)===fn);if(fa)rows=rows.filter(h=>(h.areas||[]).includes(fa));
   if(f==='seated')rows=rows.filter(h=>h.seated.length);if(f==='progress')rows=rows.filter(h=>h.prog.length);if(f==='none')rows=rows.filter(h=>!h.seated.length&&!h.prog.length);if(f==='month')rows=rows.filter(h=>h.monthLinked.length);if(f==='ref')rows=rows.filter(h=>h.referrer);
   rows.sort((a,b)=>{if(!!a.last!==!!b.last)return a.last?-1:1;if(a.last!==b.last)return a.last<b.last?1:-1;return (a.company||'').localeCompare(b.company||'','ja');});
-  document.getElementById('hr-count').textContent=`${rows.length}名`;
+  document.getElementById('hr-count').textContent=`${rows.length}名`;pager('hr',rows.length,'hr-pager');
   const vn=r=>esc((vmap[r.vendorId]||{}).company||r.vendorName);
-  document.getElementById('hr-rows').innerHTML=rows.length?rows.map(h=>{
+  document.getElementById('hr-rows').innerHTML=rows.length?page('hr',rows).map(h=>{
     const seatedHtml=h.seated.length?`<div class="chips tight">${h.seated.slice().sort((a,b)=>((b.date||'')>(a.date||'')?1:-1)).map(r=>vchip(r,vmap,'seated')).join('')}</div>`:'<span class="mini">—</span>';
     const progHtml=h.prog.length?`<div class="chips tight">${h.prog.map(r=>vchip(r,vmap,'prog')).join('')}</div>`:'<span class="mini">—</span>';
     const actBadge=`<span class="act act-${h.act==='活動中'?'on':h.act==='休眠'?'idle':'off'}" title="${h.actOverride?'手動設定':(h.lastAct?'最終活動 '+esc(h.lastAct)+'（'+h.days+'日前）':'活動記録なし')}">${h.act}${h.actOverride?'<small>手動</small>':''}</span>`;
@@ -930,12 +959,13 @@ function openHr(key){
       <div class="mini">協力費累計 ${h.fee?yen(h.fee):'—'}</div></div>
     <div class="tabs" style="margin-top:8px"><button role="tab" aria-selected="true" onclick="hrSub(this,'hr-p-meet')">つないだ企業（${h.rs.length}）</button><button role="tab" aria-selected="false" onclick="hrSub(this,'hr-p-edit')">情報を編集</button></div>
     <div id="hr-p-meet">
-      ${h.rs.length?`<div class="tablewrap" style="margin-top:10px"><table style="min-width:640px"><thead><tr><th>企業</th><th>興味度</th><th>状況</th><th>商談日時</th><th>結果</th><th></th></tr></thead><tbody>${h.rs.slice().sort((a,b)=>dtKey(b).localeCompare(dtKey(a))).map(r=>`<tr>
+      ${h.rs.length?`<div class="tablewrap" style="margin-top:10px"><table style="min-width:640px"><thead><tr><th>企業</th><th>興味度</th><th>状況</th><th>商談日時</th><th>結果</th><th>協力費支払</th><th></th></tr></thead><tbody>${h.rs.slice().sort((a,b)=>dtKey(b).localeCompare(dtKey(a))).map(r=>`<tr>
         <td><div class="vn-logo">${(vmap[r.vendorId]||{}).logo?`<img class="vlogo" src="${esc(vmap[r.vendorId].logo)}" alt="" loading="lazy" onerror="this.remove()">`:''}<div><b>${esc((vmap[r.vendorId]||{}).company||r.vendorName)}</b><div class="mini">${esc(r.vendorName)}</div></div></div></td>
         <td><span class="tag ${RATE_CLASS[r.rate]||'cold'}">${RATE_LABEL[r.rate]||'—'}</span></td>
         <td><select class="st s${Math.max(0,STATUS.indexOf(r.status||'未対応'))}" onchange="setStatus('${r.id}','${r.vendorId}',this.value,this)">${STATUS.map(st=>`<option ${st===(r.status||'未対応')?'selected':''}>${st}</option>`).join('')}</select></td>
         <td><div style="display:flex;gap:4px"><input type="date" class="cell" value="${esc((r.date||'').slice(0,10).replace(/\//g,'-'))}" onchange="saveResp('${r.id}','${r.vendorId}','date',this.value.replace(/-/g,'/'))"><input type="time" class="cell time" value="${esc(r.time||'')}" onchange="saveResp('${r.id}','${r.vendorId}','time',this.value)"></div></td>
         <td>${(r.status==='着座済み'||r.status==='日程調整中')?resultSelect(r):'<span class="mini">—</span>'}</td>
+        <td>${r.status==='着座済み'?`<select class="cell st ${r.payout==='支払済'?'s2':''}" onchange="saveResp('${r.id}','${r.vendorId}','payout',this.value)">${PAYOUT.map(o=>`<option ${o===(r.payout||'未払い')?'selected':''}>${o}</option>`).join('')}</select><div class="mini">${r.fee!==''&&r.fee!=null?yen(r.fee):''}</div>`:'<span class="mini">—</span>'}</td>
         <td><button class="del" title="削除" onclick="deleteMeeting('${r.id}','${r.vendorId}')">削除</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="mini" style="margin-top:10px">まだ企業をつないでいません。</div>'}
       ${meetingForm({key})}
       <div style="margin-top:10px"><button class="ghost" onclick="closeHr();setTab('leads');leadFilter='すべて';document.getElementById('lead-q').value='${esc(h.name)}';renderAdmin()">つなぎタブで開く</button></div>
@@ -1000,7 +1030,8 @@ function renderSales(){
     .map(([t,n,s])=>`<div class="kpi"><small>${t}</small><b>${n}</b><div class="sub">${s}</div></div>`).join('');
   const vmap={};A.vendors.forEach(x=>vmap[x.id]=x);
   const opt=(arr,cur)=>arr.map(o=>`<option ${o===cur?'selected':''}>${o}</option>`).join('');
-  document.getElementById('s-rows').innerHTML=R.length?R.map(r=>{const cy=cycleOf(monthOf(r.date));const vOver=isCash(r)&&cy&&isOver(cy.vendorDue)&&(r.invoice||'未請求')!=='入金済';const hOver=cy&&isOver(cy.hrDue)&&(r.payout||'未払い')==='未払い';return `<tr class="${vOver||hOver?'late':''}">
+  pager('s',R.length,'s-pager');
+  document.getElementById('s-rows').innerHTML=R.length?page('s',R).map(r=>{const cy=cycleOf(monthOf(r.date));const vOver=isCash(r)&&cy&&isOver(cy.vendorDue)&&(r.invoice||'未請求')!=='入金済';const hOver=cy&&isOver(cy.hrDue)&&(r.payout||'未払い')==='未払い';return `<tr class="${vOver||hOver?'late':''}">
     <td><input type="date" class="cell" value="${esc((r.date||'').slice(0,10).replace(/\//g,'-'))}" onchange="saveResp('${r.id}','${r.vendorId}','date',this.value.replace(/-/g,'/'))"></td>
     <td><b>${mark(r.company,r.name)}${esc(r.name)}</b><div class="mini">${esc(r.company)}</div></td>
     <td><div class="vn-logo">${vmap[r.vendorId]?.logo?`<img class="vlogo" src="${esc(vmap[r.vendorId].logo)}" alt="" loading="lazy" onerror="this.remove()">`:''}<div>${esc(vmap[r.vendorId]?.company||r.vendorName)}<div class="mini">${esc(r.vendorName)}</div></div></div></td>
@@ -1038,8 +1069,10 @@ function renderCycle(m,R,vmap){
       <div class="c"><div><b>人事 協力費支払</b><div class="mini">${fmtD(cy.close)} 締め → 翌々月10営業日</div></div><div><div class="due ${isOver(cy.hrDue)&&up?'over':''}">${fmtDY(cy.hrDue)}</div><div class="mini">${up?up+'名分が未払い':'すべて支払済'}</div></div></div>`;}
   const byV={};R.filter(isCash).forEach(r=>{const k=r.vendorId||r.vendorName;(byV[k]=byV[k]||{name:(vmap[r.vendorId]||{}).company||r.vendorName,rows:[]}).rows.push(r);});
   const sum=(a,f)=>a.reduce((x,r)=>x+(Number(r[f])||0),0);
-  document.getElementById('s-byvendor').innerHTML=Object.values(byV).sort((a,b)=>sum(b.rows,'sales')-sum(a.rows,'sales')).map(g=>{const paid=g.rows.filter(r=>r.invoice==='入金済').length,billed=g.rows.filter(r=>r.invoice==='請求済').length;
-    return `<tr><td><b>${esc(g.name)}</b></td><td class="num">${g.rows.length}</td><td class="num">${yen(sum(g.rows,'sales'))}</td><td class="mini">${paid===g.rows.length?'<span class="tag" style="background:var(--ok-soft);color:var(--ok)">入金済</span>':`入金済 ${paid} ／ 請求済 ${billed} ／ 未請求 ${g.rows.length-paid-billed}`}</td></tr>`;}).join('')||'<tr><td colspan="4" class="mini" style="padding:14px;text-align:center">—</td></tr>';
+  window._batch.v={};
+  document.getElementById('s-byvendor').innerHTML=Object.keys(byV).sort((a,b)=>sum(byV[b].rows,'sales')-sum(byV[a].rows,'sales')).map(k=>{const g=byV[k];window._batch.v[k]=g.rows;const paid=g.rows.filter(r=>r.invoice==='入金済').length,billed=g.rows.filter(r=>r.invoice==='請求済').length;
+    return `<tr><td><b>${esc(g.name)}</b></td><td class="num">${g.rows.length}</td><td class="num">${yen(sum(g.rows,'sales'))}</td><td class="mini">${paid===g.rows.length?'<span class="tag" style="background:var(--ok-soft);color:var(--ok)">入金済</span>':`入金済 ${paid} ／ 請求済 ${billed} ／ 未請求 ${g.rows.length-paid-billed}`}</td>
+      <td><select class="st" onchange="bulkFromBatch('v','${esc(k)}','invoice',this.value)"><option value="" selected>選択…</option>${INVOICE.map(o=>`<option>${o}</option>`).join('')}</select></td></tr>`;}).join('')||'<tr><td colspan="5" class="mini" style="padding:14px;text-align:center">—</td></tr>';
   const hrmap={};(A.hr||[]).forEach(h=>hrmap[h.key]=h);
   // 紹介者別：商談報酬 = 当月着座 × 3,000（refFee列）、紹介報酬 = 当月が初回着座の紹介人事 × 10,000
   const allSeated=seated();const firstMonth={};allSeated.forEach(r=>{const k=r.company.trim()+'|'+r.name.trim();const mo=monthOf(r.date);if(mo==='日付不明')return;if(!firstMonth[k]||mo<firstMonth[k])firstMonth[k]=mo;});
@@ -1048,9 +1081,18 @@ function renderCycle(m,R,vmap){
   if(!m){Object.keys(firstMonth).forEach(k=>{const h=hrmap[k];if(h&&h.referrer){const g=byRef[h.referrer]=byRef[h.referrer]||{meet:0,fee:0,newHr:new Set()};g.newHr.add(k);}});}
   document.getElementById('s-byref').innerHTML=Object.keys(byRef).map(n=>{const g=byRef[n];const bonus=g.newHr.size*REFERRAL_BONUS;return `<tr><td><b>${esc(n)}</b></td><td class="num">${yen(bonus)}<div class="mini">${g.newHr.size}名</div></td><td class="num">${yen(g.fee)}<div class="mini">${g.meet}件</div></td><td class="num pos">${yen(bonus+g.fee)}</td></tr>`;}).join('')||'<tr><td colspan="4" class="mini" style="padding:14px;text-align:center">紹介経由の着座はありません</td></tr>';
   const byH={};R.forEach(r=>{const k=r.company.trim()+'|'+r.name.trim();(byH[k]=byH[k]||{r,rows:[]}).rows.push(r);});
-  document.getElementById('s-byhr').innerHTML=Object.keys(byH).map(k=>{const g=byH[k];const h=hrmap[k]||{};const paid=g.rows.filter(r=>r.payout==='支払済').length,dec=g.rows.filter(r=>r.payout==='辞退').length;const amt=g.rows.filter(r=>r.payout!=='辞退').reduce((x,r)=>x+(Number(r.fee)||0),0);
-    return {html:`<tr><td><b>${mark(g.r.company,g.r.name)}${esc(g.r.name)}</b><div class="mini">${esc(g.r.company)}</div></td><td class="num">${g.rows.length}</td><td class="num">${yen(amt)}</td><td class="mini">${esc(h.payment||'未設定')}</td><td class="mini">${paid+dec===g.rows.length?'<span class="tag" style="background:var(--ok-soft);color:var(--ok)">完了</span>':`未払い ${g.rows.length-paid-dec}`}</td></tr>`,amt};}).sort((a,b)=>b.amt-a.amt).map(x=>x.html).join('')||'<tr><td colspan="5" class="mini" style="padding:14px;text-align:center">—</td></tr>';
+  window._batch.h={};
+  document.getElementById('s-byhr').innerHTML=Object.keys(byH).map(k=>{const g=byH[k];window._batch.h[k]=g.rows;const h=hrmap[k]||{};const paid=g.rows.filter(r=>r.payout==='支払済').length,dec=g.rows.filter(r=>r.payout==='辞退').length;const amt=g.rows.filter(r=>r.payout!=='辞退').reduce((x,r)=>x+(Number(r.fee)||0),0);
+    return {html:`<tr><td><b>${mark(g.r.company,g.r.name)}${esc(g.r.name)}</b><div class="mini">${esc(g.r.company)}</div></td><td class="num">${yen(amt)}</td><td class="mini">${esc(h.payment||'未設定')}</td><td class="mini">${paid+dec===g.rows.length?'<span class="tag" style="background:var(--ok-soft);color:var(--ok)">完了</span>':`未払い ${g.rows.length-paid-dec}`}</td>
+      <td><select class="st ${paid===g.rows.length?'s2':''}" onchange="bulkFromBatch('h','${esc(k)}','payout',this.value)"><option value="" selected>選択…</option>${PAYOUT.map(o=>`<option>${o}</option>`).join('')}</select></td></tr>`.replace('</b><div class="mini">'+esc(g.r.company)+'</div></td>','</b><div class="mini">'+esc(g.r.company)+'</div></td><td class="num">'+g.rows.length+'</td>'),amt};}).sort((a,b)=>b.amt-a.amt).map(x=>x.html).join('')||'<tr><td colspan="6" class="mini" style="padding:14px;text-align:center">—</td></tr>';
 }
+async function bulkSet(rows,field,value){
+  rows.forEach(r=>r[field]=value);renderSales();renderMeet();renderHr();
+  try{await api('bulk_update_responses',{token,items:rows.map(r=>({id:r.id,vendorId:r.vendorId,fields:{[field]:value}}))});store.set('jc_admin',{tok:token,d:A,t:Date.now()});toast(`${rows.length}件を「${value}」にしました`);}
+  catch(e){toast('保存できませんでした：'+e.message);loadAdmin();}
+}
+window._batch={};
+function bulkFromBatch(kind,key,field,value){const rows=(window._batch[kind]||{})[key]||[];if(!rows.length)return;if(!confirm(`${rows.length}件をまとめて「${value}」に変更します。よろしいですか？`)){renderSales();return;}bulkSet(rows,field,value);}
 async function saveResp(id,vendorId,field,value){const r=A.responses.find(x=>x.id===id&&x.vendorId===vendorId);if(!r)return;
   const val=(field==='sales'||field==='fee'||field==='refFee')?(value===''?'':Number(value)):value;if(r[field]===val)return;r[field]=val;
   if(field==='result'&&value==='承認'&&(r.sales===''||r.sales==null)){const vd=A.vendors.find(x=>x.id===vendorId);const p=Number(String(vd?.price||'').replace(/[^\d]/g,''));if(p){r.sales=p;api('update_response',{token,id,vendorId,fields:{sales:p}}).catch(()=>{});}}
@@ -1063,6 +1105,12 @@ function copyHrTsv(){const rows=[['会社','規模','氏名','役職','関心領
 function copySalesTsv(){const rows=[['商談日','会社','氏名','ベンダー','商談結果','売上','協力費','紹介者報酬','粗利','ベンダー請求','人事支払','アンケート']];
   seated().forEach(r=>rows.push([r.date,r.company,r.name,r.vendorName,r.result||'未確定',r.sales,r.fee,r.refFee||'',(Number(r.sales)||0)-(Number(r.fee)||0)-(Number(r.refFee)||0),r.invoice||'未請求',r.payout||'未払い',r.survey||'未提出']));
   navigator.clipboard?.writeText(rows.map(r=>r.join('\t')).join('\n')).then(()=>toast('コピーしました'),()=>toast('コピーできませんでした'));}
+const PAGE=50;const pages={hr:0,m:0,s:0};
+function pager(key,total,elId){const el=document.getElementById(elId);if(!el)return;const n=Math.max(1,Math.ceil(total/PAGE));if(pages[key]>n-1)pages[key]=n-1;if(n<=1){el.innerHTML='';return;}
+  el.innerHTML=`<span class="pager"><button ${pages[key]===0?'disabled':''} onclick="pages.${key}--;renderAdmin()">‹ 前</button><span>${pages[key]+1} / ${n}（${total}件）</span><button ${pages[key]>=n-1?'disabled':''} onclick="pages.${key}++;renderAdmin()">次 ›</button></span>`;}
+function page(key,arr){const st=pages[key]*PAGE;return arr.slice(st,st+PAGE);}
+function salesSub(k){document.querySelectorAll('#s-sub button').forEach((b,i)=>b.setAttribute('aria-pressed',String(['plan','batch','rows','months'][i]===k)));document.querySelectorAll('.ssub').forEach(p=>p.hidden=p.id!=='ss-'+k);try{sessionStorage.setItem('jc_ssub',k);}catch(e){}}
+window.addEventListener('scroll',()=>{document.getElementById('totop').classList.toggle('show',window.scrollY>400);},{passive:true});
 function renderAdmin(){
   const L=leads();const seated=L.filter(x=>x.status==='着座済み').length;
   const hrCount=new Set(A.responses.map(x=>x.company.trim()+'|'+x.name.trim()).concat((A.hr||[]).map(h=>h.key))).size;
@@ -1092,7 +1140,7 @@ function renderAdmin(){
   document.getElementById('vcount').textContent=`${A.vendors.length}社（掲載中 ${A.vendors.filter(x=>x.published).length} ・ DYM ${A.vendors.filter(x=>x.src==='DYM').length}）`;
   const ac=document.getElementById('a-cat');if(!ac.options.length)AREAS.forEach(a=>{const o=document.createElement('option');o.textContent=a;ac.appendChild(o);});
   renderPropose();renderHr();renderSales();renderMeet();
-  try{const t=sessionStorage.getItem('jc_tab');if(t&&t!==curTab)setTab(t);}catch(e){}
+  try{const t=sessionStorage.getItem('jc_tab');if(t&&t!==curTab)setTab(t);const ss=sessionStorage.getItem('jc_ssub');if(ss)salesSub(ss);}catch(e){}
 }
 async function setStatus(id,vendorId,status,sel){
   const r=A.responses.find(x=>x.id===id&&x.vendorId===vendorId);if(r){r.status=status;if(status==='着座済み'){const vd=A.vendors.find(x=>x.id===vendorId);if(!r.date)r.date=new Date().toISOString().slice(0,10).replace(/-/g,'/');if(r.sales===''||r.sales==null){const p=Number(String(vd?.price||'').replace(/[^\d]/g,''));if(p)r.sales=p;}if(r.fee===''||r.fee==null)r.fee=5000;{const hh=(A.hr||[]).find(x=>x.key===r.company.trim()+'|'+r.name.trim());if(hh&&hh.referrer&&(r.refFee===''||r.refFee==null))r.refFee=REFERRER_FEE;}r.invoice=r.invoice||'未請求';r.payout=r.payout||'未払い';r.survey=r.survey||'未提出';r.result=r.result||'未確定';}}sel.className='st s'+STATUS.indexOf(status);renderSales();renderHr();setTimeout(renderAdmin,350);
