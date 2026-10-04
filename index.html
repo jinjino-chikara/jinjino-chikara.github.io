@@ -397,7 +397,7 @@ textarea{font:inherit;width:100%;border:1px solid var(--line);border-radius:8px;
         <div class="field"><label for="vr-person">ご担当者名</label><input id="vr-person"></div>
         <div class="field"><label for="vr-mail">メールアドレス</label><input id="vr-mail" type="email"></div>
       </div>
-      <div class="field"><label for="vr-src">ご紹介元</label><select id="vr-src"><option>直接のお問い合わせ</option><option>DYM</option><option>その他の紹介</option></select></div>
+      <div class="field"><label for="vr-src">ご紹介元</label><select id="vr-src"><option>直接のお問い合わせ</option><option>ご紹介</option></select></div>
       <button class="primary" id="vr-submit" onclick="submitVendor()">掲載を申し込む</button>
       <p class="hint">お申し込み後、弊社で内容を確認し、掲載開始と条件のご案内をメールでお送りします。掲載自体に費用はかかりません。商談後に人事へお支払いするリサーチ協力費（1商談5,000円）は商談単価に含まれます。</p>
       <div id="vr-err"></div>
@@ -1383,7 +1383,7 @@ function renderPropose(){
 ${vd.desc}
 こんな企業向け：${vd.for}
 
-少しでも気になる場合は、下記から「聞いてみたい」を選んでください（30秒）。日程はこのLINEで弊社からご案内します。商談後のアンケートにご協力いただくと、協力費5,000円をお支払いします。
+少しでも気になる場合は、下記から「聞いてみたい」を選んでください（30秒）。日程はこのLINEで弊社からご案内します。
 ▶ ${link}
 
 ご不要の場合はそのままで結構です。`:'';
